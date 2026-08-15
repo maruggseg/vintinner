@@ -23,7 +23,7 @@ ARCHIVO_HISTORIAL = os.path.join("data", "historial.csv")
 
 CABECERAS = [
     "fecha_escaneo", "item_id", "titulo", "marca", "precio", "moneda",
-    "favoritos", "talla", "url",
+    "favoritos", "talla", "url", "foto_url",
 ]
 
 
@@ -37,6 +37,9 @@ def guardar_snapshot(anuncios):
             writer.writerow(CABECERAS)
 
         for a in anuncios:
+            foto = a.get("photo") or {}
+            foto_url = foto.get("url", "")
+
             writer.writerow([
                 ahora,
                 a.get("id"),
@@ -47,6 +50,7 @@ def guardar_snapshot(anuncios):
                 a.get("favourite_count", 0),
                 (a.get("size_title") or ""),
                 a.get("url"),
+                foto_url,
             ])
 
 
