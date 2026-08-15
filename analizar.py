@@ -26,11 +26,32 @@ from collections import defaultdict
 from vinted_api import crear_sesion_autenticada, item_sigue_activo
 
 ARCHIVO_HISTORIAL = os.path.join("data", "historial.csv")
+ARCHIVO_PENDIENTES = os.path.join("data", "pendientes_confirmacion.csv")
 
 # Cuántos candidatos (como máximo) se verifican contra Vinted en cada
 # ejecución, para no disparar demasiadas peticiones. Se verifican primero
 # los de mayor puntuación, que son los que de verdad importan mostrar.
 MAX_VERIFICACIONES = 60
+
+
+def cargar_pendientes():
+    """item_id -> fecha en que se detectó inactivo por primera vez (sin confirmar aún)."""
+    pendientes = {}
+    if os.path.exists(ARCHIVO_PENDIENTES):
+        with open(ARCHIVO_PENDIENTES, newline="", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            for fila in reader:
+                if len(fila) == 2:
+                    pendientes[fila[0]] = fila[1]
+    return pendientes
+
+
+def guardar_pendientes(pendientes):
+    os.makedirs("data", exist_ok=True)
+    with open(ARCHIVO_PENDIENTES, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        for item_id, fecha in pendientes.items():
+            writer.writerow([item_id, fecha])
 
 
 def cargar_historial():
@@ -99,6 +120,11 @@ def analizar_confirmado(filas):
     Igual que analizar(), pero confirma contra Vinted los candidatos a
     'vendido' antes de darlos por buenos, para eliminar los falsos
     positivos causados por el volumen de anuncios nuevos.
+
+    Exige DOBLE confirmación: un anuncio solo se marca como vendido de
+    verdad si sale "no encontrado" en dos ejecuciones distintas (no en el
+    mismo minuto), usando data/pendientes_confirmacion.csv para recordar
+    qué anuncios están "a la espera" de esa segunda confirmación.
     """
     resultados, escaneos = analizar(filas)
 
@@ -119,17 +145,39 @@ def analizar_confirmado(filas):
     sesion = crear_sesion_autenticada()
     if sesion is None:
         print("⚠️ No se pudo verificar contra Vinted (fallo de sesión). Se muestran solo candidatos sin confirmar.")
+        for r in a_verificar:
+            r["vendido_o_retirado"] = False
         return resultados, escaneos
 
-    confirmados = 0
+    pendientes = cargar_pendientes()
+    ahora = datetime.now().isoformat(timespec="seconds")
+    confirmados_definitivos = 0
+
     for r in a_verificar:
         activo = item_sigue_activo(sesion, r["item_id"])
-        r["vendido_o_retirado"] = not activo
-        if r["vendido_o_retirado"]:
-            confirmados += 1
+
+        if activo:
+            # Falsa alarma (o ya no está inactivo) — lo quitamos de pendientes si estaba.
+            pendientes.pop(r["item_id"], None)
+            r["vendido_o_retirado"] = False
+        else:
+            if r["item_id"] in pendientes:
+                # Segunda vez que sale inactivo → confirmado de verdad.
+                r["vendido_o_retirado"] = True
+                confirmados_definitivos += 1
+                pendientes.pop(r["item_id"], None)
+            else:
+                # Primera vez que sale inactivo → queda pendiente de una
+                # segunda confirmación en una ejecución futura.
+                pendientes[r["item_id"]] = ahora
+                r["vendido_o_retirado"] = False
+
         time.sleep(1)  # pausa entre comprobaciones para no parecer un bot agresivo
 
-    print(f"Verificados {len(a_verificar)} candidatos contra Vinted → {confirmados} confirmados como vendidos/retirados de verdad.")
+    guardar_pendientes(pendientes)
+
+    print(f"Verificados {len(a_verificar)} candidatos → {confirmados_definitivos} confirmados de verdad (doble check). "
+          f"{len(pendientes)} quedan a la espera de una segunda confirmación.")
 
     return resultados, escaneos
 
