@@ -8,7 +8,7 @@ aparte de escanear.py, que sigue corriendo varias veces al día).
 """
 
 import os
-from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar
+from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar_confirmado
 from telegram_bot import enviar_mensaje
 
 TOP_PRODUCTOS = 10
@@ -24,7 +24,7 @@ def construir_mensaje(resultados, escaneos):
             "Mañana debería haber más datos."
         )
 
-    vendidos = [r for r in resultados if r["vendido_o_retirado"]]
+    vendidos = [r for r in resultados if r["vendido_o_retirado"] and r["duracion_fiable"]]
     vendidos.sort(key=lambda r: r["puntuacion"], reverse=True)
 
     lineas = ["📊 *Resumen diario Vinted*", ""]
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         print("Todavía no hay historial. Ejecuta escanear.py primero.")
     else:
         filas = cargar_historial()
-        resultados, escaneos = analizar(filas)
+        resultados, escaneos = analizar_confirmado(filas)
 
         mensaje = construir_mensaje(resultados, escaneos)
         ok = enviar_mensaje(mensaje)
