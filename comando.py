@@ -1,16 +1,16 @@
 """
 Consulta bajo demanda: escríbele /resumen a tu bot en Telegram y, la próxima
 vez que este script se ejecute (programado cada pocos minutos), te contestará
-con el resumen de tendencias actual.
+con fotos de los productos top y el ranking de marcas.
 
 Guarda en data/telegram_offset.txt cuál fue el último mensaje que ya procesó,
 para no contestar dos veces al mismo mensaje ni reenviar mensajes viejos.
 """
 
 import os
-from telegram_bot import obtener_mensajes_nuevos, enviar_mensaje
-from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar
-from alertas import construir_mensaje
+from telegram_bot import obtener_mensajes_nuevos
+from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar_confirmado
+from alertas import enviar_resumen_telegram
 
 ARCHIVO_OFFSET = os.path.join("data", "telegram_offset.txt")
 
@@ -29,14 +29,6 @@ def guardar_offset(offset: int):
         f.write(str(offset))
 
 
-def generar_resumen_actual():
-    if not os.path.exists(ARCHIVO_HISTORIAL):
-        return "Todavía no hay ningún escaneo guardado. Espera al próximo escaneo automático."
-    filas = cargar_historial()
-    resultados, escaneos = analizar(filas)
-    return construir_mensaje(resultados, escaneos)
-
-
 if __name__ == "__main__":
     offset = leer_offset()
     mensajes = obtener_mensajes_nuevos(offset)
@@ -47,12 +39,19 @@ if __name__ == "__main__":
         max_update_id = offset
         for m in mensajes:
             max_update_id = max(max_update_id, m["update_id"] + 1)
-            texto = m.get("message", {}).get("text", "").strip().lower()
+            mensaje_obj = m.get("message", {})
+            texto = mensaje_obj.get("text", "").strip().lower()
+            chat_id_origen = mensaje_obj.get("chat", {}).get("id")
 
             if texto in ("/resumen", "/start", "resumen"):
-                print(f"Comando recibido: {texto}. Generando resumen...")
-                resumen = generar_resumen_actual()
-                enviar_mensaje(resumen)
+                print(f"Comando recibido de {chat_id_origen}: {texto}. Generando resumen...")
+                if not os.path.exists(ARCHIVO_HISTORIAL):
+                    from telegram_bot import enviar_mensaje
+                    enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id=chat_id_origen)
+                else:
+                    filas = cargar_historial()
+                    resultados, escaneos = analizar_confirmado(filas)
+                    enviar_resumen_telegram(resultados, escaneos, chat_id=chat_id_origen)
             else:
                 print(f"Mensaje ignorado (no es un comando reconocido): {texto!r}")
 
