@@ -24,12 +24,14 @@ def construir_mensaje(resultados, escaneos):
             "Mañana debería haber más datos."
         )
 
-    vendidos = [r for r in resultados if r["vendido_o_retirado"] and r["duracion_fiable"]]
+    confirmados = [r for r in resultados if r["vendido_o_retirado"] and r["duracion_fiable"]]
+    vendidos = [r for r in confirmados if r["favoritos"] > 0]
     vendidos.sort(key=lambda r: r["puntuacion"], reverse=True)
 
     lineas = ["📊 *Resumen diario Vinted*", ""]
     lineas.append(f"Escaneos analizados: {len(escaneos)}")
-    lineas.append(f"Anuncios que se movieron: {len(vendidos)}")
+    lineas.append(f"Anuncios vendidos/retirados confirmados: {len(confirmados)}")
+    lineas.append(f"Con al menos 1 favorito: {len(vendidos)}")
     lineas.append("")
     lineas.append("🔥 Top productos con más interés:")
 
