@@ -64,3 +64,21 @@ def buscar_varias_paginas(sesion, texto_busqueda: str, num_paginas: int = 3):
             break
         todos.extend(items)
     return todos
+
+
+def item_sigue_activo(sesion, item_id) -> bool:
+    """
+    Comprueba directamente en Vinted si un anuncio concreto sigue activo.
+    Devuelve False solo si Vinted confirma que ya no existe (vendido/retirado).
+    Si hay duda (error de red, etc.) devuelve True para no contarlo como
+    vendido por error.
+    """
+    url = f"https://{DOMINIO}/api/v2/items/{item_id}"
+    try:
+        resp = sesion.get(url, timeout=10)
+    except requests.RequestException:
+        return True
+
+    if resp.status_code == 404:
+        return False
+    return True
