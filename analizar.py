@@ -19,6 +19,7 @@ repartidos en al menos 2-3 días distintos).
 
 import csv
 import os
+import time
 from datetime import datetime
 from collections import defaultdict
 
@@ -126,6 +127,7 @@ def analizar_confirmado(filas):
         r["vendido_o_retirado"] = not activo
         if r["vendido_o_retirado"]:
             confirmados += 1
+        time.sleep(1)  # pausa entre comprobaciones para no parecer un bot agresivo
 
     print(f"Verificados {len(a_verificar)} candidatos contra Vinted → {confirmados} confirmados como vendidos/retirados de verdad.")
 
