@@ -1,0 +1,45 @@
+name: Vinted Bot
+
+on:
+  schedule:
+    # Horas en UTC. España en verano = UTC+2, en invierno = UTC+1.
+    # Escaneos: 8, 12, 16, 20 UTC (~10, 14, 18, 22 en España en verano)
+    - cron: "0 8,12,16,20 * * *"
+    # Resumen diario: 19:00 UTC (~21:00 en España en verano)
+    - cron: "0 19 * * *"
+  workflow_dispatch:   # permite lanzarlo a mano desde GitHub para probar
+
+permissions:
+  contents: write   # necesario para que el workflow pueda guardar historial.csv
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Escanear Vinted
+        if: github.event.schedule != '0 19 * * *'
+        run: python escanear.py
+
+      - name: Enviar resumen diario
+        if: github.event.schedule == '0 19 * * *'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python alertas.py
+
+      - name: Guardar historial actualizado
+        run: |
+          git config user.name "vinted-bot"
+          git config user.email "vinted-bot@users.noreply.github.com"
+          git add data/historial.csv
+          git commit -m "Actualizar historial" || echo "Sin cambios que guardar"
+          git push
