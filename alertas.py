@@ -39,24 +39,34 @@ def construir_mensaje(resultados, escaneos):
             f"{r['favoritos']} favs | visible {r['duracion_horas']}h"
         )
 
-    # Ranking por marca
+    # Ranking por marca (puntuación media + precio medio de venta)
     from collections import defaultdict
     por_marca = defaultdict(list)
     for r in vendidos:
         if r["marca"]:
-            por_marca[r["marca"]].append(r["puntuacion"])
+            try:
+                precio_num = float(r["precio"])
+            except (TypeError, ValueError):
+                precio_num = None
+            por_marca[r["marca"]].append((r["puntuacion"], precio_num))
 
     if por_marca:
         ranking_marcas = sorted(
             por_marca.items(),
-            key=lambda kv: sum(kv[1]) / len(kv[1]),
+            key=lambda kv: sum(p for p, _ in kv[1]) / len(kv[1]),
             reverse=True,
         )
         lineas.append("")
         lineas.append("📈 Marcas con más interés:")
-        for marca, puntuaciones in ranking_marcas[:TOP_MARCAS]:
-            media = sum(puntuaciones) / len(puntuaciones)
-            lineas.append(f"- {marca}: {round(media, 2)} ({len(puntuaciones)} anuncios)")
+        for marca, datos in ranking_marcas[:TOP_MARCAS]:
+            puntuaciones = [p for p, _ in datos]
+            precios = [pr for _, pr in datos if pr is not None]
+            media_puntuacion = round(sum(puntuaciones) / len(puntuaciones), 2)
+            texto_precio = ""
+            if precios:
+                media_precio = round(sum(precios) / len(precios), 2)
+                texto_precio = f" | precio medio {media_precio}€"
+            lineas.append(f"- {marca}: {media_puntuacion} ({len(datos)} anuncios){texto_precio}")
 
     return "\n".join(lineas)
 
