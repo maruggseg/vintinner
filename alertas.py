@@ -13,6 +13,14 @@ from telegram_bot import enviar_mensaje
 
 TOP_PRODUCTOS = 10
 TOP_MARCAS = 8
+PRECIO_MINIMO = 60  # € — solo se muestran anuncios a partir de este precio
+
+
+def _precio_valido(r):
+    try:
+        return float(r["precio"]) >= PRECIO_MINIMO
+    except (TypeError, ValueError):
+        return False
 
 
 def construir_mensaje(resultados, escaneos):
@@ -24,13 +32,16 @@ def construir_mensaje(resultados, escaneos):
             "Mañana debería haber más datos."
         )
 
-    confirmados = [r for r in resultados if r["vendido_o_retirado"] and r["duracion_fiable"]]
+    confirmados = [
+        r for r in resultados
+        if r["vendido_o_retirado"] and r["duracion_fiable"] and _precio_valido(r)
+    ]
     vendidos = [r for r in confirmados if r["favoritos"] > 0]
     vendidos.sort(key=lambda r: r["puntuacion"], reverse=True)
 
     lineas = ["📊 *Resumen diario Vinted*", ""]
     lineas.append(f"Escaneos analizados: {len(escaneos)}")
-    lineas.append(f"Anuncios vendidos/retirados confirmados: {len(confirmados)}")
+    lineas.append(f"Anuncios vendidos/retirados confirmados (≥{PRECIO_MINIMO}€): {len(confirmados)}")
     lineas.append(f"Con al menos 1 favorito: {len(vendidos)}")
     lineas.append("")
     lineas.append("🔥 Top productos con más interés:")
