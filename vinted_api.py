@@ -69,9 +69,10 @@ def buscar_varias_paginas(sesion, texto_busqueda: str, num_paginas: int = 3):
 def item_sigue_activo(sesion, item_id) -> bool:
     """
     Comprueba directamente en Vinted si un anuncio concreto sigue activo.
-    Devuelve False solo si Vinted confirma que ya no existe (vendido/retirado).
-    Si hay duda (error de red, etc.) devuelve True para no contarlo como
-    vendido por error.
+    Devuelve False SOLO si Vinted confirma de forma clara que ya no existe
+    (404 con un cuerpo de error reconocible). Cualquier otra cosa (bloqueo
+    temporal, error de red, respuesta rara) se trata como "sigue activo",
+    para no marcar como vendido algo que en realidad solo falló al comprobar.
     """
     url = f"https://{DOMINIO}/api/v2/items/{item_id}"
     try:
@@ -79,6 +80,20 @@ def item_sigue_activo(sesion, item_id) -> bool:
     except requests.RequestException:
         return True
 
+    if resp.status_code == 200:
+        return True
+
     if resp.status_code == 404:
-        return False
+        # Un 404 "de verdad" de Vinted trae un cuerpo JSON de error concreto.
+        # Si no podemos parsearlo como tal, es más probable que sea un
+        # bloqueo/anti-bot disfrazado de 404 que un anuncio realmente borrado.
+        try:
+            cuerpo = resp.json()
+        except ValueError:
+            return True
+        if isinstance(cuerpo, dict) and ("code" in cuerpo or "message" in cuerpo):
+            return False
+        return True
+
+    # Cualquier otro código (403, 429, 5xx...) = duda, no lo contamos como vendido.
     return True
