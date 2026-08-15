@@ -49,7 +49,7 @@ jobs:
         run: |
           git config user.name "vinted-bot"
           git config user.email "vinted-bot@users.noreply.github.com"
-          git add data/historial.csv data/telegram_offset.txt
+          git add data/historial.csv data/telegram_offset.txt data/pendientes_confirmacion.csv
           git commit -m "Actualizar datos" || echo "Sin cambios que guardar"
           git pull --rebase origin main
           git push
