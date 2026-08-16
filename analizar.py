@@ -16,7 +16,7 @@ falsos positivos.
 
 import csv
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 ARCHIVO_HISTORIAL = os.path.join("data", "historial.csv")
@@ -80,6 +80,66 @@ def analizar_interes(filas):
         })
 
     return resultados, escaneos_unicos
+
+
+def analizar_top_racha(filas, dias=3, precio_minimo=60, top_n=5):
+    """
+    Ranking distinto al de 'interés ahora mismo': mira TODA la ventana de
+    los últimos `dias` días (no solo el escaneo más reciente) y calcula,
+    para cada anuncio visto 2+ veces en ese periodo, cuántos favoritos ha
+    ganado y en cuánto tiempo. Devuelve los `top_n` que más rápido subieron.
+    """
+    if not filas:
+        return []
+
+    limite = datetime.now() - timedelta(days=dias)
+    filas_periodo = [f for f in filas if f["fecha_escaneo"] >= limite]
+
+    por_item = defaultdict(list)
+    for f in filas_periodo:
+        por_item[f["item_id"]].append(f)
+
+    candidatos = []
+    for item_id, apariciones in por_item.items():
+        apariciones.sort(key=lambda x: x["fecha_escaneo"])
+        if len(apariciones) < 2:
+            continue  # necesitamos al menos 2 avistamientos para medir crecimiento
+
+        try:
+            precio = float(apariciones[-1]["precio"])
+        except (TypeError, ValueError):
+            precio = 0
+        if precio < precio_minimo:
+            continue
+
+        primera_vez = apariciones[0]["fecha_escaneo"]
+        ultima_vez = apariciones[-1]["fecha_escaneo"]
+        favoritos_primera = int(apariciones[0]["favoritos"] or 0)
+        favoritos_ultima = int(apariciones[-1]["favoritos"] or 0)
+        crecimiento = favoritos_ultima - favoritos_primera
+
+        if crecimiento <= 0:
+            continue  # sin subida real de favoritos, no interesa para este ranking
+
+        horas = (ultima_vez - primera_vez).total_seconds() / 3600
+        velocidad = crecimiento / (horas + 1)
+
+        candidatos.append({
+            "item_id": item_id,
+            "titulo": apariciones[-1]["titulo"],
+            "marca": apariciones[-1]["marca"],
+            "precio": apariciones[-1]["precio"],
+            "favoritos_inicio": favoritos_primera,
+            "favoritos_ahora": favoritos_ultima,
+            "crecimiento_favoritos": crecimiento,
+            "horas": round(horas, 1),
+            "velocidad_favoritos": round(velocidad, 2),
+            "url": apariciones[-1]["url"],
+            "foto_url": apariciones[-1].get("foto_url", ""),
+        })
+
+    candidatos.sort(key=lambda r: (r["velocidad_favoritos"], r["crecimiento_favoritos"]), reverse=True)
+    return candidatos[:top_n]
 
 
 if __name__ == "__main__":
