@@ -9,7 +9,7 @@ para no contestar dos veces al mismo mensaje ni reenviar mensajes viejos.
 
 import os
 from telegram_bot import obtener_mensajes_nuevos
-from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar_confirmado
+from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar_interes
 from alertas import enviar_resumen_telegram
 
 ARCHIVO_OFFSET = os.path.join("data", "telegram_offset.txt")
@@ -50,7 +50,7 @@ if __name__ == "__main__":
                     enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id=chat_id_origen)
                 else:
                     filas = cargar_historial()
-                    resultados, escaneos = analizar_confirmado(filas)
+                    resultados, escaneos = analizar_interes(filas)
                     enviar_resumen_telegram(resultados, escaneos, chat_id=chat_id_origen)
             else:
                 print(f"Mensaje ignorado (no es un comando reconocido): {texto!r}")
