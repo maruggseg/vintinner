@@ -76,11 +76,14 @@ def enviar_resumen_telegram(resultados, escaneos, chat_id=None):
                 f"{r['url']}"
             )
             if r.get("foto_url"):
+                print(f"→ Enviando foto: {r['titulo'][:40]!r} | url: {r['foto_url']}")
                 enviado = enviar_foto(r["foto_url"], caption, chat_id=chat_id)
+                print(f"  resultado enviar_foto: {'OK' if enviado else 'FALLÓ, mando solo texto'}")
                 if not enviado:
                     # La foto falló al enviarse (ej. Vinted bloqueó la descarga) — mandamos el texto igualmente.
                     enviar_mensaje(caption, chat_id=chat_id)
             else:
+                print(f"→ Sin foto_url para: {r['titulo'][:40]!r} — mando solo texto")
                 enviar_mensaje(caption, chat_id=chat_id)
 
     if ranking_marcas:
