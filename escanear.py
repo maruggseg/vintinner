@@ -27,6 +27,34 @@ CABECERAS = [
 ]
 
 
+def extraer_foto_url(anuncio: dict) -> str:
+    """
+    Saca la URL de la foto de portada del anuncio. Vinted no siempre usa la
+    misma estructura, así que probamos varias rutas posibles por si acaso.
+    Solo devolvemos UNA foto (la principal), nunca la galería completa.
+    """
+    foto = anuncio.get("photo") or {}
+
+    if isinstance(foto, dict):
+        if foto.get("url"):
+            return foto["url"]
+        if foto.get("full_size_url"):
+            return foto["full_size_url"]
+        miniaturas = foto.get("thumbnails") or []
+        if miniaturas:
+            # Cogemos la miniatura de mayor resolución (suele ser la última de la lista)
+            return miniaturas[-1].get("url", "")
+
+    # Alternativa: algunos anuncios traen una lista "photos" en vez de "photo"
+    fotos = anuncio.get("photos") or []
+    if fotos and isinstance(fotos, list):
+        primera = fotos[0]
+        if isinstance(primera, dict):
+            return primera.get("url") or primera.get("full_size_url", "")
+
+    return ""
+
+
 def guardar_snapshot(anuncios):
     ahora = datetime.now().isoformat(timespec="seconds")
     existe = os.path.exists(ARCHIVO_HISTORIAL)
@@ -37,9 +65,6 @@ def guardar_snapshot(anuncios):
             writer.writerow(CABECERAS)
 
         for a in anuncios:
-            foto = a.get("photo") or {}
-            foto_url = foto.get("url", "")
-
             writer.writerow([
                 ahora,
                 a.get("id"),
@@ -50,7 +75,7 @@ def guardar_snapshot(anuncios):
                 a.get("favourite_count", 0),
                 (a.get("size_title") or ""),
                 a.get("url"),
-                foto_url,
+                extraer_foto_url(a),
             ])
 
 
@@ -67,6 +92,7 @@ if __name__ == "__main__":
         os.makedirs("data", exist_ok=True)
         guardar_snapshot(anuncios)
 
-        print(f"✅ Guardados {len(anuncios)} anuncios en {ARCHIVO_HISTORIAL}")
+        con_foto = sum(1 for a in anuncios if extraer_foto_url(a))
+        print(f"✅ Guardados {len(anuncios)} anuncios en {ARCHIVO_HISTORIAL} ({con_foto} con foto detectada)")
         print("Repite este escaneo varias veces al día durante unos días.")
         print("Cuantos más escaneos acumules, mejor funcionará analizar.py")
