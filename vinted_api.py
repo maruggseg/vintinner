@@ -66,6 +66,41 @@ def buscar_varias_paginas(sesion, texto_busqueda: str, num_paginas: int = 3):
     return todos
 
 
+def buscar_por_categoria(sesion, catalog_ids, pagina: int = 1, por_pagina: int = 96, precio_desde: float = None):
+    """
+    Igual que buscar_anuncios, pero filtrando por categoría real de Vinted
+    (mucho más preciso que buscar por palabras sueltas, sin ruido de otras
+    cosas que casualmente mencionan la palabra en el título/descripción).
+    """
+    url = f"https://{DOMINIO}/api/v2/catalog/items"
+    params = {
+        "catalog_ids": catalog_ids,
+        "per_page": por_pagina,
+        "page": pagina,
+        "order": "newest_first",
+    }
+    if precio_desde is not None:
+        params["price_from"] = precio_desde
+
+    respuesta = sesion.get(url, params=params, timeout=10)
+    if respuesta.status_code != 200:
+        print(f"⚠️ Error {respuesta.status_code} al buscar por categoría (página {pagina}).")
+        return []
+
+    return respuesta.json().get("items", [])
+
+
+def buscar_categoria_varias_paginas(sesion, catalog_ids, num_paginas: int = 3, precio_desde: float = None):
+    """Junta varias páginas de resultados de una categoría en una sola lista."""
+    todos = []
+    for pagina in range(1, num_paginas + 1):
+        items = buscar_por_categoria(sesion, catalog_ids, pagina=pagina, precio_desde=precio_desde)
+        if not items:
+            break
+        todos.extend(items)
+    return todos
+
+
 def item_sigue_activo(sesion, item_id) -> bool:
     """
     Comprueba directamente en Vinted si un anuncio concreto sigue activo.
