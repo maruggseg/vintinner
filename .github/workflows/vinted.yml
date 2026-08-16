@@ -7,8 +7,6 @@ on:
     - cron: "*/20 * * * *"
     # Resumen diario: 19:00 UTC (~21:00 en España en verano)
     - cron: "0 19 * * *"
-    # Revisión de comandos (/resumen escrito a mano): cada 5 minutos
-    - cron: "*/5 * * * *"
   workflow_dispatch:   # permite lanzarlo a mano desde GitHub para probar
 
 permissions:
@@ -31,6 +29,9 @@ jobs:
         if: github.event.schedule == '*/20 * * * *' || github.event_name == 'workflow_dispatch'
         run: python escanear.py
 
+      - name: Generar datos para la web
+        run: python generar_web.py
+
       - name: Enviar resumen diario
         if: github.event.schedule == '0 19 * * *'
         env:
@@ -38,18 +39,11 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python alertas.py
 
-      - name: Revisar comandos de Telegram
-        if: github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python comando.py
-
       - name: Guardar cambios (historial y offset)
         run: |
           git config user.name "vinted-bot"
           git config user.email "vinted-bot@users.noreply.github.com"
-          git add data/historial.csv data/telegram_offset.txt
+          git add data/historial.csv site/data.json
           git commit -m "Actualizar datos" || echo "Sin cambios que guardar"
           git pull --rebase origin main
           git push
