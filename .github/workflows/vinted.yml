@@ -7,8 +7,8 @@ on:
     - cron: "0 * * * *"
     # Resumen diario: 19:00 UTC (~21:00 en España en verano)
     - cron: "0 19 * * *"
-    # Revisión de comandos (/resumen escrito a mano): cada 10 minutos
-    - cron: "*/10 * * * *"
+    # Revisión de comandos (/resumen escrito a mano): cada 5 minutos
+    - cron: "*/5 * * * *"
   workflow_dispatch:   # permite lanzarlo a mano desde GitHub para probar
 
 permissions:
@@ -39,7 +39,7 @@ jobs:
         run: python alertas.py
 
       - name: Revisar comandos de Telegram
-        if: github.event.schedule == '*/10 * * * *' || github.event_name == 'workflow_dispatch'
+        if: github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
