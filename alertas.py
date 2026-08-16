@@ -7,7 +7,7 @@ visto en más de un escaneo, cuánto les han subido los favoritos.
 """
 
 import os
-from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar_interes
+from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar_interes, analizar_top_racha
 from telegram_bot import enviar_mensaje, enviar_foto
 from collections import defaultdict
 
@@ -92,6 +92,42 @@ def enviar_resumen_telegram(resultados, escaneos, chat_id=None):
             media = round(sum(favs) / len(favs), 2)
             lineas.append(f"- {marca}: {media} ({len(favs)} anuncios)")
         enviar_mensaje("\n".join(lineas), chat_id=chat_id)
+
+
+def enviar_top_racha_telegram(filas, chat_id=None, dias=3):
+    """
+    Comando separado del resumen normal: los 5 anuncios que MÁS RÁPIDO han
+    subido de favoritos en los últimos `dias` días (no solo en el último
+    escaneo, sino mirando toda esa ventana de tiempo).
+    """
+    top = analizar_top_racha(filas, dias=dias, precio_minimo=PRECIO_MINIMO, top_n=5)
+
+    if not top:
+        enviar_mensaje(
+            f"🚀 Top con más subida de favoritos ({dias} días)\n\n"
+            f"Todavía no hay suficientes datos o ningún anuncio ≥{PRECIO_MINIMO}€ "
+            "ha ganado favoritos en este periodo. Prueba más tarde.",
+            chat_id=chat_id,
+        )
+        return
+
+    enviar_mensaje(f"🚀 Top 5 con más subida de favoritos (últimos {dias} días)", chat_id=chat_id)
+
+    for i, r in enumerate(top, start=1):
+        caption = (
+            f"#{i} — {r['titulo']}\n"
+            f"Marca: {r['marca'] or 's/marca'}\n"
+            f"Precio: {r['precio']}€\n"
+            f"Favoritos: {r['favoritos_inicio']} → {r['favoritos_ahora']} "
+            f"(+{r['crecimiento_favoritos']} en {r['horas']}h)\n"
+            f"{r['url']}"
+        )
+        if r.get("foto_url"):
+            enviado = enviar_foto(r["foto_url"], caption, chat_id=chat_id)
+            if not enviado:
+                enviar_mensaje(caption, chat_id=chat_id)
+        else:
+            enviar_mensaje(caption, chat_id=chat_id)
 
 
 if __name__ == "__main__":
