@@ -13,11 +13,12 @@ import csv
 import os
 from datetime import datetime
 
-from vinted_api import crear_sesion_autenticada, buscar_varias_paginas
+from vinted_api import crear_sesion_autenticada, buscar_categoria_varias_paginas
 
 # --- CONFIGURACIÓN ---
-BUSQUEDA = "zapatillas"       # barrido amplio, sin filtrar marca
-PAGINAS_A_REVISAR = 3          # 3 páginas x 96 = hasta ~288 anuncios por escaneo
+CATALOG_IDS = "2632,1242"       # Zapatillas mujer (2632) + Zapatillas hombre (1242)
+PRECIO_DESDE = 60               # solo traemos anuncios que ya cumplen el mínimo de precio
+PAGINAS_A_REVISAR = 3           # 3 páginas x 96 = hasta ~288 anuncios por escaneo
 ARCHIVO_HISTORIAL = os.path.join("data", "historial.csv")
 # ----------------------
 
@@ -86,8 +87,8 @@ if __name__ == "__main__":
     if sesion is None:
         print("No se pudo conectar. Revisa el mensaje de arriba.")
     else:
-        print(f"Buscando '{BUSQUEDA}' ({PAGINAS_A_REVISAR} páginas)...")
-        anuncios = buscar_varias_paginas(sesion, BUSQUEDA, PAGINAS_A_REVISAR)
+        print(f"Buscando categoría Zapatillas de deporte, ≥{PRECIO_DESDE}€ ({PAGINAS_A_REVISAR} páginas)...")
+        anuncios = buscar_categoria_varias_paginas(sesion, CATALOG_IDS, PAGINAS_A_REVISAR, precio_desde=PRECIO_DESDE)
 
         os.makedirs("data", exist_ok=True)
         guardar_snapshot(anuncios)
