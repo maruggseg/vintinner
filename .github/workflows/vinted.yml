@@ -3,8 +3,8 @@ name: Vinted Bot
 on:
   schedule:
     # Horas en UTC. España en verano = UTC+2, en invierno = UTC+1.
-    # Escaneos: cada 20 minutos
-    - cron: "*/20 * * * *"
+    # Escaneos: cada 10 minutos
+    - cron: "*/10 * * * *"
     # Resumen diario: 19:00 UTC (~21:00 en España en verano)
     - cron: "0 19 * * *"
   workflow_dispatch:   # permite lanzarlo a mano desde GitHub para probar
@@ -26,7 +26,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Escanear Vinted
-        if: github.event.schedule == '*/20 * * * *' || github.event_name == 'workflow_dispatch'
+        if: github.event.schedule == '*/10 * * * *' || github.event_name == 'workflow_dispatch'
         run: python escanear.py
 
       - name: Enviar resumen diario
