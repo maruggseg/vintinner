@@ -96,11 +96,11 @@ def enviar_resumen_telegram(resultados, escaneos, chat_id=None):
 
 def enviar_top_racha_telegram(filas, chat_id=None, dias=3):
     """
-    Comando separado del resumen normal: los 5 anuncios que MÁS RÁPIDO han
+    Comando separado del resumen normal: los 10 anuncios que MÁS RÁPIDO han
     subido de favoritos en los últimos `dias` días (no solo en el último
     escaneo, sino mirando toda esa ventana de tiempo).
     """
-    top = analizar_top_racha(filas, dias=dias, precio_minimo=PRECIO_MINIMO, top_n=5)
+    top = analizar_top_racha(filas, dias=dias, precio_minimo=PRECIO_MINIMO, top_n=10)
 
     if not top:
         enviar_mensaje(
@@ -111,7 +111,8 @@ def enviar_top_racha_telegram(filas, chat_id=None, dias=3):
         )
         return
 
-    enviar_mensaje(f"🚀 Top 5 con más subida de favoritos (últimos {dias} días)", chat_id=chat_id)
+    enviar_mensaje(f"🚀 Top 10 con más subida de favoritos (últimos {dias} días)", chat_id=chat_id)
+
 
     for i, r in enumerate(top, start=1):
         caption = (
