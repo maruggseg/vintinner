@@ -172,7 +172,7 @@ def comando_top(chat_id, dias=5):
         })
 
     candidatos.sort(key=lambda r: (r["velocidad"], r["crecimiento"]), reverse=True)
-    top = candidatos[:5]
+    top = candidatos[:10]
 
     if not top:
         enviar_mensaje(
@@ -182,7 +182,7 @@ def comando_top(chat_id, dias=5):
         )
         return
 
-    enviar_mensaje(f"🚀 Top 5 con más subida de favoritos (últimos {dias} días)", chat_id)
+    enviar_mensaje(f"🚀 Top 10 con más subida de favoritos (últimos {dias} días)", chat_id)
 
     for i, r in enumerate(top, start=1):
         caption = (
@@ -219,4 +219,3 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write(b"OK")
-
