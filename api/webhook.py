@@ -23,6 +23,7 @@ DOMINIO_TELEGRAM = "https://api.telegram.org/bot" + TELEGRAM_TOKEN
 
 ARCHIVO_HISTORIAL = os.path.join(os.path.dirname(__file__), "..", "data", "historial.csv")
 PRECIO_MINIMO = 60
+EDAD_MAXIMA_DIAS = 7  # ignoramos anuncios que llevamos rastreando más tiempo que esto: ya no son "nuevos"
 
 
 def enviar_mensaje(texto, chat_id):
@@ -86,6 +87,9 @@ def comando_resumen(chat_id):
 
         primera, ultima = apariciones[0], apariciones[-1]
         horas = (ultima["fecha_escaneo"] - primera["fecha_escaneo"]).total_seconds() / 3600
+        if horas > EDAD_MAXIMA_DIAS * 24:
+            continue  # lo llevamos rastreando demasiado tiempo, ya no cuenta como "reciente"
+
         fav_ahora = int(ultima["favoritos"] or 0)
         fav_inicio = int(primera["favoritos"] or 0)
         crecimiento = fav_ahora - fav_inicio
@@ -94,24 +98,30 @@ def comando_resumen(chat_id):
         resultados.append({
             "titulo": ultima["titulo"], "marca": ultima["marca"], "precio": ultima["precio"],
             "favoritos": fav_ahora, "crecimiento": crecimiento, "horas": round(horas, 1),
-            "velocidad": velocidad, "url": ultima["url"], "foto_url": ultima.get("foto_url", ""),
+            "velocidad": round(velocidad, 2), "url": ultima["url"], "foto_url": ultima.get("foto_url", ""),
             "num_apariciones": len(apariciones),
         })
 
-    resultados.sort(key=lambda r: (r["favoritos"], r["velocidad"]), reverse=True)
+    # Primero velocidad (lo que "se mueve" ahora), favoritos totales como desempate.
+    resultados.sort(key=lambda r: (r["velocidad"], r["favoritos"]), reverse=True)
     top = resultados[:8]
 
     enviar_mensaje(
-        f"📊 Resumen Vinted\n\nEscaneos analizados: {len(escaneos)}\nAnuncios activos ≥{PRECIO_MINIMO}€: {len(resultados)}",
+        f"📊 Resumen Vinted — mejores para vender ahora\n\n"
+        f"Escaneos analizados: {len(escaneos)}\n"
+        f"Anuncios activos ≥{PRECIO_MINIMO}€ y vistos por primera vez hace ≤{EDAD_MAXIMA_DIAS} días: {len(resultados)}",
         chat_id,
     )
 
     if not top:
-        enviar_mensaje(f"No hay anuncios activos de ≥{PRECIO_MINIMO}€ todavía.", chat_id)
+        enviar_mensaje(f"No hay anuncios recientes (≤{EDAD_MAXIMA_DIAS} días) de ≥{PRECIO_MINIMO}€ todavía.", chat_id)
         return
 
     for r in top:
-        crecimiento_txt = f"+{r['crecimiento']} favs en {r['horas']}h" if r["num_apariciones"] >= 2 else "recién detectado"
+        crecimiento_txt = (
+            f"+{r['crecimiento']} favs en {r['horas']}h ({r['velocidad']} favs/h)"
+            if r["num_apariciones"] >= 2 else "recién detectado"
+        )
         caption = (
             f"{r['titulo']}\nMarca: {r['marca'] or 's/marca'}\nPrecio: {r['precio']}€\n"
             f"Favoritos ahora: {r['favoritos']} ({crecimiento_txt})\n{r['url']}"
@@ -133,7 +143,7 @@ def comando_resumen(chat_id):
         enviar_mensaje("\n".join(lineas), chat_id)
 
 
-def comando_top(chat_id, dias=5):
+def comando_top(chat_id, dias=EDAD_MAXIMA_DIAS):
     filas = cargar_historial()
     if not filas:
         enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id)
