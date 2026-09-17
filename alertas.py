@@ -16,6 +16,20 @@ TOP_MARCAS = 8
 PRECIO_MINIMO = 60  # € — solo se muestran anuncios a partir de este precio
 EDAD_MAXIMA_DIAS = 7  # ignoramos anuncios que llevamos rastreando más tiempo que esto: ya no son "nuevos"
 
+SIMBOLOS_MONEDA = {"EUR": "€", "USD": "$", "GBP": "£"}
+
+
+def simbolo_moneda(moneda) -> str:
+    """
+    Desde el cambio de API, Vinted a veces muestra anuncios en otra moneda
+    (según la IP de quien pregunta). No forzamos EUR en el escaneo porque
+    eso puede dejar el bot sin datos — en vez de eso, mostramos el símbolo
+    que corresponda a cada anuncio en concreto.
+    """
+    if not moneda:
+        return "€"
+    return SIMBOLOS_MONEDA.get(moneda, f" {moneda}")
+
 
 def _precio_valido(r):
     try:
@@ -84,7 +98,7 @@ def enviar_resumen_telegram(resultados, escaneos, chat_id=None):
             caption = (
                 f"{r['titulo']}\n"
                 f"Marca: {r['marca'] or 's/marca'}\n"
-                f"Precio: {r['precio']}€\n"
+                f"Precio: {r['precio']}{simbolo_moneda(r.get('moneda'))}\n"
                 f"Favoritos ahora: {r['favoritos']} ({crecimiento_txt})\n"
                 f"{r['url']}"
             )
@@ -131,7 +145,7 @@ def enviar_top_racha_telegram(filas, chat_id=None, dias=EDAD_MAXIMA_DIAS):
         caption = (
             f"#{i} — {r['titulo']}\n"
             f"Marca: {r['marca'] or 's/marca'}\n"
-            f"Precio: {r['precio']}€\n"
+            f"Precio: {r['precio']}{simbolo_moneda(r.get('moneda'))}\n"
             f"Favoritos: {r['favoritos_inicio']} → {r['favoritos_ahora']} "
             f"(+{r['crecimiento_favoritos']} en {r['horas']}h)\n"
             f"{r['url']}"

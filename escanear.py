@@ -96,11 +96,12 @@ def extraer_talla(anuncio: dict) -> str:
 
 def guardar_snapshot(anuncios):
     """
-    Devuelve (guardados, con_foto): cuántos anuncios se escribieron de
-    verdad y cuántos de esos traían foto. Los anuncios que no están en EUR
-    se ignoran — desde el cambio de API, la búsqueda a veces devuelve
-    anuncios de otros países en su moneda local, y este bot es para el
-    mercado español (mezclar monedas sin convertir falsearía precios).
+    Devuelve (guardados, con_foto): cuántos anuncios se escribieron y
+    cuántos de esos traían foto. Guardamos todos, sea cual sea su moneda
+    (se ve en el CSV en la columna "moneda") — filtrar por EUR aquí es
+    peligroso: Vinted decide en qué moneda mostrar cada anuncio según la IP
+    de quien pregunta, y la IP de los runners de GitHub Actions hace que
+    a veces TODO el lote venga en USD aunque sea el mercado español.
     """
     ahora = datetime.now().isoformat(timespec="seconds")
     existe = os.path.exists(ARCHIVO_HISTORIAL)
@@ -114,9 +115,6 @@ def guardar_snapshot(anuncios):
 
         for a in anuncios:
             precio = a.get("price") or {}
-            if precio.get("currency_code") != "EUR":
-                continue
-
             foto_url = extraer_foto_url(a)
             writer.writerow([
                 ahora,
@@ -178,9 +176,6 @@ if __name__ == "__main__":
         guardados, con_foto = guardar_snapshot(anuncios)
         eliminadas = podar_historial_antiguo()
 
-        omitidos = len(anuncios) - guardados
         print(f"✅ Guardados {guardados} anuncios en {ARCHIVO_HISTORIAL} ({con_foto} con foto detectada)")
-        if omitidos:
-            print(f"   (omitidos {omitidos} anuncios en moneda distinta de EUR)")
         if eliminadas:
             print(f"🧹 Podadas {eliminadas} filas de más de {RETENCION_DIAS} días")

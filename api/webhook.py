@@ -61,6 +61,20 @@ def _precio_valido(precio_str):
         return False
 
 
+SIMBOLOS_MONEDA = {"EUR": "€", "USD": "$", "GBP": "£"}
+
+
+def simbolo_moneda(moneda) -> str:
+    """
+    Vinted a veces muestra anuncios en otra moneda según la IP de quien
+    pregunta, así que no forzamos EUR al guardar — mostramos el símbolo
+    que corresponda a cada anuncio en concreto.
+    """
+    if not moneda:
+        return "€"
+    return SIMBOLOS_MONEDA.get(moneda, f" {moneda}")
+
+
 def comando_resumen(chat_id):
     filas = cargar_historial()
     if not filas:
@@ -97,6 +111,7 @@ def comando_resumen(chat_id):
 
         resultados.append({
             "titulo": ultima["titulo"], "marca": ultima["marca"], "precio": ultima["precio"],
+            "moneda": ultima.get("moneda", "EUR"),
             "favoritos": fav_ahora, "crecimiento": crecimiento, "horas": round(horas, 1),
             "velocidad": round(velocidad, 2), "url": ultima["url"], "foto_url": ultima.get("foto_url", ""),
             "num_apariciones": len(apariciones),
@@ -123,7 +138,7 @@ def comando_resumen(chat_id):
             if r["num_apariciones"] >= 2 else "recién detectado"
         )
         caption = (
-            f"{r['titulo']}\nMarca: {r['marca'] or 's/marca'}\nPrecio: {r['precio']}€\n"
+            f"{r['titulo']}\nMarca: {r['marca'] or 's/marca'}\nPrecio: {r['precio']}{simbolo_moneda(r.get('moneda'))}\n"
             f"Favoritos ahora: {r['favoritos']} ({crecimiento_txt})\n{r['url']}"
         )
         if r.get("foto_url") and not enviar_foto(r["foto_url"], caption, chat_id):
@@ -176,6 +191,7 @@ def comando_top(chat_id, dias=EDAD_MAXIMA_DIAS):
 
         candidatos.append({
             "titulo": ultima["titulo"], "marca": ultima["marca"], "precio": ultima["precio"],
+            "moneda": ultima.get("moneda", "EUR"),
             "favoritos_inicio": fav_inicio, "favoritos_ahora": fav_ahora, "crecimiento": crecimiento,
             "horas": round(horas, 1), "velocidad": velocidad, "url": ultima["url"],
             "foto_url": ultima.get("foto_url", ""),
@@ -196,7 +212,7 @@ def comando_top(chat_id, dias=EDAD_MAXIMA_DIAS):
 
     for i, r in enumerate(top, start=1):
         caption = (
-            f"#{i} — {r['titulo']}\nMarca: {r['marca'] or 's/marca'}\nPrecio: {r['precio']}€\n"
+            f"#{i} — {r['titulo']}\nMarca: {r['marca'] or 's/marca'}\nPrecio: {r['precio']}{simbolo_moneda(r.get('moneda'))}\n"
             f"Favoritos: {r['favoritos_inicio']} → {r['favoritos_ahora']} (+{r['crecimiento']} en {r['horas']}h)\n{r['url']}"
         )
         if r.get("foto_url") and not enviar_foto(r["foto_url"], caption, chat_id):

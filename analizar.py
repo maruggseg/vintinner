@@ -70,6 +70,7 @@ def analizar_interes(filas):
             "titulo": apariciones[-1]["titulo"],
             "marca": apariciones[-1]["marca"],
             "precio": apariciones[-1]["precio"],
+            "moneda": apariciones[-1].get("moneda", "EUR"),
             "favoritos": favoritos_ahora,
             "crecimiento_favoritos": crecimiento_favoritos,
             "horas_visible": round(horas_visible, 1),
@@ -129,6 +130,7 @@ def analizar_top_racha(filas, dias=3, precio_minimo=60, top_n=5):
             "titulo": apariciones[-1]["titulo"],
             "marca": apariciones[-1]["marca"],
             "precio": apariciones[-1]["precio"],
+            "moneda": apariciones[-1].get("moneda", "EUR"),
             "favoritos_inicio": favoritos_primera,
             "favoritos_ahora": favoritos_ultima,
             "crecimiento_favoritos": crecimiento,
@@ -157,7 +159,7 @@ if __name__ == "__main__":
 
             print(f"\n🔥 TOP anuncios activos con más interés:\n")
             for r in top[:20]:
-                print(f"- {r['titulo']} ({r['marca']}) | {r['precio']}€ | "
+                print(f"- {r['titulo']} ({r['marca']}) | {r['precio']} {r['moneda']} | "
                       f"{r['favoritos']} favs (+{r['crecimiento_favoritos']} en {r['horas_visible']}h) | {r['url']}")
 
             por_marca = defaultdict(list)
