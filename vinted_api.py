@@ -85,6 +85,8 @@ def buscar_por_categoria(sesion, catalog_ids, pagina: int = 1, por_pagina: int =
     respuesta = sesion.get(url, params=params, timeout=10)
     if respuesta.status_code != 200:
         print(f"⚠️ Error {respuesta.status_code} al buscar por categoría (página {pagina}).")
+        print(f"   URL: {respuesta.url}")
+        print(f"   Respuesta: {respuesta.text[:500]}")
         return []
 
     return respuesta.json().get("items", [])
