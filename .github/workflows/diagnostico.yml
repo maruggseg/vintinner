@@ -1,0 +1,44 @@
+name: Diagnóstico categorías Vinted
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Buscar categoría de zapatillas en el árbol actual
+        run: |
+          python3 -c "
+          from vinted_api import crear_sesion_autenticada, DOMINIO
+
+          sesion = crear_sesion_autenticada()
+          if sesion is None:
+              print('No se pudo crear sesión')
+              raise SystemExit(1)
+
+          resp = sesion.get(f'https://{DOMINIO}/api/v2/catalogs', timeout=15)
+          print('Status:', resp.status_code)
+          if resp.status_code != 200:
+              print(resp.text[:1000])
+              raise SystemExit(1)
+
+          datos = resp.json().get('catalogs', [])
+
+          def buscar(nodos, ruta=''):
+              for n in nodos:
+                  titulo = n.get('title', '')
+                  ruta_actual = f'{ruta} > {titulo}' if ruta else titulo
+                  if 'zapatilla' in titulo.lower() or 'sneaker' in titulo.lower():
+                      print(f'ID={n.get(\"id\")}  RUTA={ruta_actual}')
+                  hijos = n.get('catalogs') or []
+                  if hijos:
+                      buscar(hijos, ruta_actual)
+
+          buscar(datos)
+          "
