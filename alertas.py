@@ -14,6 +14,7 @@ from collections import defaultdict
 TOP_PRODUCTOS = 8
 TOP_MARCAS = 8
 PRECIO_MINIMO = 60  # € — solo se muestran anuncios a partir de este precio
+EDAD_MAXIMA_DIAS = 7  # ignoramos anuncios que llevamos rastreando más tiempo que esto: ya no son "nuevos"
 
 
 def _precio_valido(r):
@@ -23,9 +24,17 @@ def _precio_valido(r):
         return False
 
 
+def _es_reciente(r):
+    """True si llevamos viendo este anuncio (desde su primer escaneo) EDAD_MAXIMA_DIAS o menos."""
+    return r["horas_visible"] <= EDAD_MAXIMA_DIAS * 24
+
+
 def top_y_marcas(resultados, escaneos):
-    validos = [r for r in resultados if _precio_valido(r)]
-    validos.sort(key=lambda r: (r["favoritos"], r["velocidad_favoritos"]), reverse=True)
+    # Orden: primero velocidad de favoritos (lo que "se mueve" ahora), favoritos
+    # totales como desempate. Solo anuncios recientes, para que uno viejo con
+    # muchos favoritos acumulados no tape a lo que está despegando ahora.
+    validos = [r for r in resultados if _precio_valido(r) and _es_reciente(r)]
+    validos.sort(key=lambda r: (r["velocidad_favoritos"], r["favoritos"]), reverse=True)
     top = validos[:TOP_PRODUCTOS]
 
     por_marca = defaultdict(list)
@@ -54,18 +63,22 @@ def enviar_resumen_telegram(resultados, escaneos, chat_id=None):
     top, ranking_marcas, total_validos = top_y_marcas(resultados, escaneos)
 
     intro = (
-        f"📊 Resumen Vinted\n\n"
+        f"📊 Resumen Vinted — mejores para vender ahora\n\n"
         f"Escaneos analizados: {len(escaneos)}\n"
-        f"Anuncios activos ≥{PRECIO_MINIMO}€: {total_validos}"
+        f"Anuncios activos ≥{PRECIO_MINIMO}€ y vistos por primera vez hace ≤{EDAD_MAXIMA_DIAS} días: {total_validos}"
     )
     enviar_mensaje(intro, chat_id=chat_id)
 
     if not top:
-        enviar_mensaje(f"No hay anuncios activos de ≥{PRECIO_MINIMO}€ todavía. Prueba más tarde.", chat_id=chat_id)
+        enviar_mensaje(
+            f"No hay anuncios recientes (≤{EDAD_MAXIMA_DIAS} días) de ≥{PRECIO_MINIMO}€ todavía. Prueba más tarde.",
+            chat_id=chat_id,
+        )
     else:
         for r in top:
             crecimiento_txt = (
-                f"+{r['crecimiento_favoritos']} favs en {r['horas_visible']}h"
+                f"+{r['crecimiento_favoritos']} favs en {r['horas_visible']}h "
+                f"({r['velocidad_favoritos']} favs/h)"
                 if r["num_apariciones"] >= 2 else "recién detectado"
             )
             caption = (
@@ -94,7 +107,7 @@ def enviar_resumen_telegram(resultados, escaneos, chat_id=None):
         enviar_mensaje("\n".join(lineas), chat_id=chat_id)
 
 
-def enviar_top_racha_telegram(filas, chat_id=None, dias=3):
+def enviar_top_racha_telegram(filas, chat_id=None, dias=EDAD_MAXIMA_DIAS):
     """
     Comando separado del resumen normal: los 10 anuncios que MÁS RÁPIDO han
     subido de favoritos en los últimos `dias` días (no solo en el último

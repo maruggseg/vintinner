@@ -59,7 +59,7 @@ if __name__ == "__main__":
                     enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id=chat_id_origen)
                 else:
                     filas = cargar_historial()
-                    enviar_top_racha_telegram(filas, chat_id=chat_id_origen, dias=5)
+                    enviar_top_racha_telegram(filas, chat_id=chat_id_origen, dias=7)
             else:
                 print(f"Mensaje ignorado (no es un comando reconocido): {texto!r}")
 
