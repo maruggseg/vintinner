@@ -59,6 +59,20 @@ def extraer_foto_url(anuncio: dict) -> str:
     return ""
 
 
+def url_completa(anuncio: dict) -> str:
+    """
+    Desde el cambio de API de Vinted, el campo "url" del anuncio ya no viene
+    absoluto (https://www.vinted.es/items/...), sino como ruta relativa
+    (/items/...). Completamos el dominio si hace falta.
+    """
+    url = anuncio.get("url") or ""
+    if not url:
+        return ""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    return f"https://www.vinted.es{url}" if url.startswith("/") else f"https://www.vinted.es/{url}"
+
+
 def guardar_snapshot(anuncios):
     ahora = datetime.now().isoformat(timespec="seconds")
     existe = os.path.exists(ARCHIVO_HISTORIAL)
@@ -78,7 +92,7 @@ def guardar_snapshot(anuncios):
                 a.get("price", {}).get("currency_code"),
                 a.get("favourite_count", 0),
                 (a.get("size_title") or ""),
-                a.get("url"),
+                url_completa(a),
                 extraer_foto_url(a),
             ])
 
