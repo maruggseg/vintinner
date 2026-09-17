@@ -10,4 +10,4 @@ Funciona en dos modos:
 import os
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "PEGA_AQUI_TU_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "6846502360")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "PEGA_AQUI_TU_CHAT_ID")
