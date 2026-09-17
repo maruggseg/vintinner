@@ -153,7 +153,7 @@ if __name__ == "__main__":
         if len(escaneos) < 2:
             print("Necesitas al menos 2 escaneos para ver crecimiento de favoritos. Vuelve a ejecutar escanear.py más tarde.")
         else:
-            top = sorted(resultados, key=lambda r: (r["favoritos"], r["velocidad_favoritos"]), reverse=True)
+            top = sorted(resultados, key=lambda r: (r["velocidad_favoritos"], r["favoritos"]), reverse=True)
 
             print(f"\n🔥 TOP anuncios activos con más interés:\n")
             for r in top[:20]:
