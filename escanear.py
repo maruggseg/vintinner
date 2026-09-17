@@ -9,7 +9,7 @@ cuándo apareció un anuncio y cuándo dejó de verse.
 
 import csv
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from vinted_api import crear_sesion_autenticada, buscar_categoria_varias_paginas
 
@@ -18,6 +18,13 @@ CATALOG_IDS = "2632"            # Zapatillas MUJER (Vinted) — antes incluía t
 PRECIO_DESDE = 60               # solo traemos anuncios que ya cumplen el mínimo de precio
 PAGINAS_A_REVISAR = 3           # 3 páginas x 96 = hasta ~288 anuncios por escaneo
 ARCHIVO_HISTORIAL = os.path.join("data", "historial.csv")
+
+# Con escaneos cada 10 min (288 filas/escaneo) el historial crece ~11MB/día.
+# Sin podar, llegaría al límite de 100MB de GitHub por archivo en menos de
+# una semana y el "git push" del workflow empezaría a fallar. Ningún análisis
+# actual mira más allá de 7 días (ver EDAD_MAXIMA_DIAS en alertas.py), así
+# que podamos exactamente a esa ventana.
+RETENCION_DIAS = 7
 # ----------------------
 
 CABECERAS = [
@@ -76,6 +83,33 @@ def guardar_snapshot(anuncios):
             ])
 
 
+def podar_historial_antiguo() -> int:
+    """Elimina del CSV las filas de más de RETENCION_DIAS. Devuelve cuántas se quitaron."""
+    if not os.path.exists(ARCHIVO_HISTORIAL):
+        return 0
+
+    limite = datetime.now() - timedelta(days=RETENCION_DIAS)
+
+    with open(ARCHIVO_HISTORIAL, newline="", encoding="utf-8") as f:
+        lector = csv.reader(f)
+        cabecera = next(lector)
+        todas = list(lector)
+
+    filas_recientes = [fila for fila in todas if datetime.fromisoformat(fila[0]) >= limite]
+    eliminadas = len(todas) - len(filas_recientes)
+    if eliminadas <= 0:
+        return 0
+
+    archivo_temporal = ARCHIVO_HISTORIAL + ".tmp"
+    with open(archivo_temporal, "w", newline="", encoding="utf-8") as f:
+        escritor = csv.writer(f)
+        escritor.writerow(cabecera)
+        escritor.writerows(filas_recientes)
+    os.replace(archivo_temporal, ARCHIVO_HISTORIAL)
+
+    return eliminadas
+
+
 if __name__ == "__main__":
     print("Conectando con Vinted...")
     sesion = crear_sesion_autenticada()
@@ -88,6 +122,9 @@ if __name__ == "__main__":
 
         os.makedirs("data", exist_ok=True)
         guardar_snapshot(anuncios)
+        eliminadas = podar_historial_antiguo()
 
         con_foto = sum(1 for a in anuncios if extraer_foto_url(a))
         print(f"✅ Guardados {len(anuncios)} anuncios en {ARCHIVO_HISTORIAL} ({con_foto} con foto detectada)")
+        if eliminadas:
+            print(f"🧹 Podadas {eliminadas} filas de más de {RETENCION_DIAS} días")
