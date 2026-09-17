@@ -5,9 +5,15 @@ Lo usan tanto escanear.py como (en el futuro) el bot de Telegram.
 No hay que tocar nada de este archivo.
 """
 
+import time
+
 import requests
 
 DOMINIO = "www.vinted.es"  # cambia si usas vinted.com, vinted.fr, etc.
+
+# Desde el 14/09/2026 Vinted movió la búsqueda de catálogo a este dominio y
+# ruta nuevos (antes era {DOMINIO}/api/v2/catalog/items, que ahora da 404).
+DOMINIO_API = "api.vinted.es"
 
 HEADERS_BASE = {
     "User-Agent": (
@@ -72,15 +78,23 @@ def buscar_por_categoria(sesion, catalog_ids, pagina: int = 1, por_pagina: int =
     (mucho más preciso que buscar por palabras sueltas, sin ruido de otras
     cosas que casualmente mencionan la palabra en el título/descripción).
     """
-    url = f"https://{DOMINIO}/api/v2/catalog/items"
+    url = f"https://{DOMINIO_API}/svc-catalogue/items"
     params = {
-        "catalog_ids": catalog_ids,
-        "per_page": por_pagina,
         "page": pagina,
+        "per_page": por_pagina,
+        "time": int(time.time()),
+        "search_text": "",
         "order": "newest_first",
+        "attribute_ids[catalog]": catalog_ids,
+        "attribute_ids[size]": "",
+        "attribute_ids[brand]": "",
+        "attribute_ids[status]": "",
+        "attribute_ids[color]": "",
+        "attribute_ids[material]": "",
     }
     if precio_desde is not None:
         params["price_from"] = precio_desde
+        params["currency"] = "EUR"
 
     respuesta = sesion.get(url, params=params, timeout=10)
     if respuesta.status_code != 200:
