@@ -83,16 +83,21 @@ def analizar_interes(filas):
     return resultados, escaneos_unicos
 
 
-def analizar_top_racha(filas, dias=3, precio_minimo=60, top_n=5):
+def analizar_top_racha(filas, dias=3, precio_minimo=60, top_n=5, tasas=None):
     """
     Ranking distinto al de 'interés ahora mismo': mira TODA la ventana de
     los últimos `dias` días (no solo el escaneo más reciente) y calcula,
     para cada anuncio visto 2+ veces en ese periodo, cuántos favoritos ha
     ganado y en cuánto tiempo. Devuelve los `top_n` que más rápido subieron.
+
+    `tasas`: diccionario {moneda: unidades por 1 EUR} para poder comparar
+    precio_minimo (en EUR) contra anuncios en otra moneda. Si no se pasa,
+    no se convierte nada (se asume todo en EUR).
     """
     if not filas:
         return []
 
+    tasas = tasas or {"EUR": 1.0}
     limite = datetime.now() - timedelta(days=dias)
     filas_periodo = [f for f in filas if f["fecha_escaneo"] >= limite]
 
@@ -107,10 +112,13 @@ def analizar_top_racha(filas, dias=3, precio_minimo=60, top_n=5):
             continue  # necesitamos al menos 2 avistamientos para medir crecimiento
 
         try:
-            precio = float(apariciones[-1]["precio"])
+            precio_original = float(apariciones[-1]["precio"])
         except (TypeError, ValueError):
-            precio = 0
-        if precio < precio_minimo:
+            precio_original = 0
+        moneda = apariciones[-1].get("moneda", "EUR")
+        tasa = tasas.get(moneda, 1.0) or 1.0
+        precio_eur = precio_original / tasa
+        if precio_eur < precio_minimo:
             continue
 
         primera_vez = apariciones[0]["fecha_escaneo"]

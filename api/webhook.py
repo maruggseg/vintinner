@@ -22,8 +22,26 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 DOMINIO_TELEGRAM = "https://api.telegram.org/bot" + TELEGRAM_TOKEN
 
 ARCHIVO_HISTORIAL = os.path.join(os.path.dirname(__file__), "..", "data", "historial.csv")
-PRECIO_MINIMO = 60
+PRECIO_MINIMO = 70
 EDAD_MAXIMA_DIAS = 7  # ignoramos anuncios que llevamos rastreando más tiempo que esto: ya no son "nuevos"
+
+TASAS_RESPALDO = {"EUR": 1.0, "USD": 1.08, "GBP": 0.86}
+
+
+def obtener_tasas_cambio() -> dict:
+    """Tasas a EUR (unidades de esa moneda por 1 EUR); respaldo fijo si la API falla."""
+    try:
+        resp = requests.get(
+            "https://api.frankfurter.app/latest?from=EUR&to=USD,GBP", timeout=5
+        )
+        if resp.status_code == 200:
+            tasas = resp.json().get("rates") or {}
+            if tasas:
+                tasas["EUR"] = 1.0
+                return tasas
+    except requests.RequestException:
+        pass
+    return dict(TASAS_RESPALDO)
 
 
 def enviar_mensaje(texto, chat_id):
@@ -54,11 +72,17 @@ def cargar_historial():
     return filas
 
 
-def _precio_valido(precio_str):
+def _precio_en_eur(precio_str, moneda, tasas) -> float:
     try:
-        return float(precio_str) >= PRECIO_MINIMO
+        precio = float(precio_str)
     except (TypeError, ValueError):
-        return False
+        return 0.0
+    tasa = tasas.get(moneda or "EUR", 1.0) or 1.0
+    return precio / tasa
+
+
+def _precio_valido(precio_str, moneda, tasas):
+    return _precio_en_eur(precio_str, moneda, tasas) >= PRECIO_MINIMO
 
 
 SIMBOLOS_MONEDA = {"EUR": "€", "USD": "$", "GBP": "£"}
@@ -87,6 +111,7 @@ def comando_resumen(chat_id):
         return
 
     ultimo = escaneos[-1]
+    tasas = obtener_tasas_cambio()
     por_item = defaultdict(list)
     for f in filas:
         por_item[f["item_id"]].append(f)
@@ -96,7 +121,7 @@ def comando_resumen(chat_id):
         apariciones.sort(key=lambda x: x["fecha_escaneo"])
         if apariciones[-1]["fecha_escaneo"] != ultimo:
             continue
-        if not _precio_valido(apariciones[-1]["precio"]):
+        if not _precio_valido(apariciones[-1]["precio"], apariciones[-1].get("moneda"), tasas):
             continue
 
         primera, ultima = apariciones[0], apariciones[-1]
@@ -167,6 +192,7 @@ def comando_top(chat_id, dias=EDAD_MAXIMA_DIAS):
     limite = datetime.now() - timedelta(days=dias)
     filas_periodo = [f for f in filas if f["fecha_escaneo"] >= limite]
 
+    tasas = obtener_tasas_cambio()
     por_item = defaultdict(list)
     for f in filas_periodo:
         por_item[f["item_id"]].append(f)
@@ -176,7 +202,7 @@ def comando_top(chat_id, dias=EDAD_MAXIMA_DIAS):
         apariciones.sort(key=lambda x: x["fecha_escaneo"])
         if len(apariciones) < 2:
             continue
-        if not _precio_valido(apariciones[-1]["precio"]):
+        if not _precio_valido(apariciones[-1]["precio"], apariciones[-1].get("moneda"), tasas):
             continue
 
         primera, ultima = apariciones[0], apariciones[-1]

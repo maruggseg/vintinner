@@ -7,16 +7,44 @@ visto en más de un escaneo, cuánto les han subido los favoritos.
 """
 
 import os
+import requests
 from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar_interes, analizar_top_racha
 from telegram_bot import enviar_mensaje, enviar_foto
 from collections import defaultdict
 
 TOP_PRODUCTOS = 8
 TOP_MARCAS = 8
-PRECIO_MINIMO = 60  # € — solo se muestran anuncios a partir de este precio
+PRECIO_MINIMO = 70  # € — solo se muestran anuncios a partir de este precio
 EDAD_MAXIMA_DIAS = 7  # ignoramos anuncios que llevamos rastreando más tiempo que esto: ya no son "nuevos"
 
 SIMBOLOS_MONEDA = {"EUR": "€", "USD": "$", "GBP": "£"}
+
+# Tasas de respaldo (unidades de esa moneda por 1 EUR) por si la API de
+# cambio en vivo no responde. Aproximadas: mejor una comparación algo
+# desviada que dejar el bot sin poder filtrar por precio.
+TASAS_RESPALDO = {"EUR": 1.0, "USD": 1.08, "GBP": 0.86}
+
+
+def obtener_tasas_cambio() -> dict:
+    """
+    Tasas de cambio a EUR (unidades de esa moneda por 1 EUR), para comparar
+    PRECIO_MINIMO (en EUR) contra anuncios en otra moneda sin falsear el
+    filtro. Vinted a veces devuelve todo el lote en USD (según la IP de
+    quien pregunta), así que sin esto un anuncio de 72$ (~67€) pasaría el
+    filtro de "≥70" por simple coincidencia numérica.
+    """
+    try:
+        resp = requests.get(
+            "https://api.frankfurter.app/latest?from=EUR&to=USD,GBP", timeout=5
+        )
+        if resp.status_code == 200:
+            tasas = resp.json().get("rates") or {}
+            if tasas:
+                tasas["EUR"] = 1.0
+                return tasas
+    except requests.RequestException:
+        pass
+    return dict(TASAS_RESPALDO)
 
 
 def simbolo_moneda(moneda) -> str:
@@ -31,11 +59,17 @@ def simbolo_moneda(moneda) -> str:
     return SIMBOLOS_MONEDA.get(moneda, f" {moneda}")
 
 
-def _precio_valido(r):
+def _precio_en_eur(r, tasas) -> float:
     try:
-        return float(r["precio"]) >= PRECIO_MINIMO
+        precio = float(r["precio"])
     except (TypeError, ValueError):
-        return False
+        return 0.0
+    tasa = tasas.get(r.get("moneda") or "EUR", 1.0) or 1.0
+    return precio / tasa
+
+
+def _precio_valido(r, tasas):
+    return _precio_en_eur(r, tasas) >= PRECIO_MINIMO
 
 
 def _es_reciente(r):
@@ -47,7 +81,8 @@ def top_y_marcas(resultados, escaneos):
     # Orden: primero velocidad de favoritos (lo que "se mueve" ahora), favoritos
     # totales como desempate. Solo anuncios recientes, para que uno viejo con
     # muchos favoritos acumulados no tape a lo que está despegando ahora.
-    validos = [r for r in resultados if _precio_valido(r) and _es_reciente(r)]
+    tasas = obtener_tasas_cambio()
+    validos = [r for r in resultados if _precio_valido(r, tasas) and _es_reciente(r)]
     validos.sort(key=lambda r: (r["velocidad_favoritos"], r["favoritos"]), reverse=True)
     top = validos[:TOP_PRODUCTOS]
 
@@ -127,7 +162,8 @@ def enviar_top_racha_telegram(filas, chat_id=None, dias=EDAD_MAXIMA_DIAS):
     subido de favoritos en los últimos `dias` días (no solo en el último
     escaneo, sino mirando toda esa ventana de tiempo).
     """
-    top = analizar_top_racha(filas, dias=dias, precio_minimo=PRECIO_MINIMO, top_n=10)
+    tasas = obtener_tasas_cambio()
+    top = analizar_top_racha(filas, dias=dias, precio_minimo=PRECIO_MINIMO, top_n=10, tasas=tasas)
 
     if not top:
         enviar_mensaje(
