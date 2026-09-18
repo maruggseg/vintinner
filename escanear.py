@@ -15,7 +15,7 @@ from vinted_api import crear_sesion_autenticada, buscar_categoria_varias_paginas
 
 # --- CONFIGURACIÓN ---
 CATALOG_IDS = "2632"            # Zapatillas MUJER (Vinted) — antes incluía también 1242 (hombre)
-PRECIO_DESDE = 60               # solo traemos anuncios que ya cumplen el mínimo de precio
+PRECIO_DESDE = 70               # solo traemos anuncios que ya cumplen el mínimo de precio
 PAGINAS_A_REVISAR = 3           # 3 páginas x 96 = hasta ~288 anuncios por escaneo
 ARCHIVO_HISTORIAL = os.path.join("data", "historial.csv")
 
