@@ -21,6 +21,11 @@ HEADERS_BASE = {
         "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
     ),
     "Accept": "application/json, text/plain, */*",
+    # Sin esto, Vinted parece decidir la moneda a mostrar por geo-IP del
+    # runner (casi siempre EE.UU. en GitHub Actions) y devuelve casi todo
+    # en USD aunque preguntemos en vinted.es. El navegador real manda este
+    # header — lo replicamos a ver si basta para que devuelva EUR.
+    "Accept-Language": "es-ES,es;q=0.9",
 }
 
 
