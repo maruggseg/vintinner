@@ -12,6 +12,7 @@ Variable de entorno necesaria en Vercel: TELEGRAM_TOKEN
 import os
 import csv
 import json
+import re
 from datetime import datetime, timedelta
 from collections import defaultdict
 from http.server import BaseHTTPRequestHandler
@@ -86,6 +87,52 @@ def _precio_valido(precio_str, moneda, tasas):
 
 
 SIMBOLOS_MONEDA = {"EUR": "€", "USD": "$", "GBP": "£"}
+
+
+_PALABRAS_RUIDO_MODELO = {
+    "new", "used", "size", "sz", "uk", "us", "eu", "womens", "women", "woman",
+    "mens", "man", "shoes", "shoe", "sneakers", "sneaker", "trainers", "trainer",
+    "boots", "boot", "vtg", "vintage", "og", "original", "edicion", "edición",
+    "especial", "special", "brand", "box", "in", "with", "and", "the", "for",
+    "de", "et", "pour", "avec", "para", "con",
+}
+
+
+def _limpiar_palabra_modelo(palabra: str) -> str:
+    return re.sub(r"[^\wáéíóúñ]", "", palabra.lower())
+
+
+def extraer_modelo(titulo: str, marca: str) -> str:
+    """Ver la versión gemela en analizar.py — misma heurística, código
+    duplicado a propósito porque este archivo es autocontenido para Vercel."""
+    if not titulo:
+        return ""
+
+    palabras = [_limpiar_palabra_modelo(p) for p in titulo.split()]
+    palabras = [p for p in palabras if p]
+
+    marca_palabras = [_limpiar_palabra_modelo(p) for p in (marca or "").split()]
+    marca_palabras = [p for p in marca_palabras if p]
+
+    inicio = 0
+    if marca_palabras:
+        texto = " ".join(palabras)
+        texto_marca = " ".join(marca_palabras)
+        idx = texto.find(texto_marca)
+        if idx != -1:
+            inicio = len(texto[:idx].split()) + len(marca_palabras)
+
+    candidatas = []
+    for p in palabras[inicio:]:
+        if p in _PALABRAS_RUIDO_MODELO:
+            continue
+        if p.isdigit() and len(p) <= 2:
+            continue
+        candidatas.append(p)
+        if len(candidatas) == 2:
+            break
+
+    return " ".join(candidatas)
 
 
 def simbolo_moneda(moneda) -> str:
@@ -247,6 +294,102 @@ def comando_top(chat_id, dias=EDAD_MAXIMA_DIAS):
             enviar_mensaje(caption, chat_id)
 
 
+def comando_modelos(chat_id, dias=EDAD_MAXIMA_DIAS, min_anuncios=3):
+    """
+    A diferencia de /resumen y /top (anuncios sueltos), agrupa por
+    marca+modelo (heurística sobre el título) para ver qué modelo se
+    repite con buen interés entre varios vendedores distintos — señal más
+    fiable de "esto se vende bien" que un anuncio suelto con suerte.
+    """
+    filas = cargar_historial()
+    if not filas:
+        enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id)
+        return
+
+    limite = datetime.now() - timedelta(days=dias)
+    filas_periodo = [f for f in filas if f["fecha_escaneo"] >= limite]
+
+    tasas = obtener_tasas_cambio()
+    por_item = defaultdict(list)
+    for f in filas_periodo:
+        por_item[f["item_id"]].append(f)
+
+    resumen_items = []
+    for item_id, apariciones in por_item.items():
+        apariciones.sort(key=lambda x: x["fecha_escaneo"])
+        primera, ultima = apariciones[0], apariciones[-1]
+
+        precio_eur = _precio_en_eur(ultima["precio"], ultima.get("moneda"), tasas)
+        if precio_eur < PRECIO_MINIMO:
+            continue
+
+        marca = (ultima.get("marca") or "").strip()
+        modelo = extraer_modelo(ultima.get("titulo", ""), marca)
+        if not modelo:
+            continue
+
+        fav_ahora = int(ultima["favoritos"] or 0)
+        fav_inicio = int(primera["favoritos"] or 0)
+        horas = (ultima["fecha_escaneo"] - primera["fecha_escaneo"]).total_seconds() / 3600
+        velocidad = (fav_ahora - fav_inicio) / (horas + 1) if len(apariciones) >= 2 else 0.0
+
+        resumen_items.append({
+            "item_id": item_id, "marca": marca, "modelo": modelo,
+            "precio_eur": precio_eur, "favoritos": fav_ahora, "velocidad": velocidad,
+            "titulo": ultima.get("titulo", ""), "url": ultima.get("url", ""),
+        })
+
+    grupos = defaultdict(list)
+    for r in resumen_items:
+        grupos[(r["marca"], r["modelo"])].append(r)
+
+    tendencias = []
+    for (marca, modelo), items in grupos.items():
+        if len({i["item_id"] for i in items}) < min_anuncios:
+            continue
+        velocidad_media = sum(i["velocidad"] for i in items) / len(items)
+        favoritos_media = sum(i["favoritos"] for i in items) / len(items)
+        precio_medio = sum(i["precio_eur"] for i in items) / len(items)
+        ejemplo = max(items, key=lambda i: i["favoritos"])
+        tendencias.append({
+            "marca": marca, "modelo": modelo,
+            "num_anuncios": len({i["item_id"] for i in items}),
+            "velocidad_media": round(velocidad_media, 2),
+            "favoritos_media": round(favoritos_media, 1),
+            "precio_medio_eur": round(precio_medio, 1),
+            "ejemplo_titulo": ejemplo["titulo"], "ejemplo_url": ejemplo["url"],
+        })
+
+    tendencias.sort(key=lambda t: (t["velocidad_media"], t["num_anuncios"]), reverse=True)
+    tendencias = tendencias[:10]
+
+    if not tendencias:
+        enviar_mensaje(
+            f"🏆 Modelos en tendencia (últimos {dias} días)\n\n"
+            f"Todavía no hay ningún modelo visto en {min_anuncios}+ anuncios distintos de "
+            f"≥{PRECIO_MINIMO}€ en este periodo. Prueba más tarde.",
+            chat_id,
+        )
+        return
+
+    enviar_mensaje(
+        f"🏆 Modelos en tendencia (últimos {dias} días)\n\n"
+        "Marca + modelo que se repite con buen interés entre varios vendedores "
+        "distintos (no solo un anuncio suelto con suerte).",
+        chat_id,
+    )
+
+    for i, t in enumerate(tendencias, start=1):
+        caption = (
+            f"#{i} — {t['marca'] or 's/marca'} {t['modelo']}\n"
+            f"Visto en {t['num_anuncios']} anuncios distintos\n"
+            f"Favoritos medios: {t['favoritos_media']} | Ritmo medio: {t['velocidad_media']} favs/h\n"
+            f"Precio medio: ~{t['precio_medio_eur']}€\n"
+            f"Ejemplo: {t['ejemplo_titulo']}\n{t['ejemplo_url']}"
+        )
+        enviar_mensaje(caption, chat_id)
+
+
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
@@ -263,6 +406,8 @@ class handler(BaseHTTPRequestHandler):
                     comando_resumen(chat_id)
                 elif texto in ("/top", "top"):
                     comando_top(chat_id)
+                elif texto in ("/modelos", "modelos"):
+                    comando_modelos(chat_id)
         except Exception as e:
             print(f"Error procesando update: {e}")
 

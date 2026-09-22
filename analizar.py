@@ -16,10 +16,70 @@ falsos positivos.
 
 import csv
 import os
+import re
 from datetime import datetime, timedelta
 from collections import defaultdict
 
 ARCHIVO_HISTORIAL = os.path.join("data", "historial.csv")
+
+# Palabras que no aportan a identificar el MODELO concreto (tallas, estado,
+# palabras sueltas de relleno en varios idiomas de los títulos que aparecen
+# en Vinted España). No es una lista exhaustiva: el objetivo es agrupar
+# "razonablemente bien", no perfecto.
+_PALABRAS_RUIDO_MODELO = {
+    "new", "used", "size", "sz", "uk", "us", "eu", "womens", "women", "woman",
+    "mens", "man", "shoes", "shoe", "sneakers", "sneaker", "trainers", "trainer",
+    "boots", "boot", "vtg", "vintage", "og", "original", "edicion", "edición",
+    "especial", "special", "brand", "box", "in", "with", "and", "the", "for",
+    "de", "et", "pour", "avec", "para", "con",
+}
+
+
+def _limpiar_palabra_modelo(palabra: str) -> str:
+    return re.sub(r"[^\wáéíóúñ]", "", palabra.lower())
+
+
+def extraer_modelo(titulo: str, marca: str) -> str:
+    """
+    Heurística para sacar 1-2 palabras que identifiquen el MODELO dentro de
+    la marca (ej. "Samba" en "Adidas Samba edición especial", "9060" en
+    "New Balance 9060"). Busca la marca dentro del título y se queda con lo
+    que viene justo después; si no la encuentra (ej. "Nb 9060" en vez de
+    "New Balance 9060"), coge las primeras palabras "útiles" del título.
+
+    No es perfecto — títulos en varios idiomas, abreviaturas de marca — pero
+    agrupa razonablemente bien anuncios del mismo modelo entre vendedores
+    distintos, que es lo que hace falta para ver qué modelo se repite como
+    tendencia (más fiable que fijarse en un solo anuncio suelto).
+    """
+    if not titulo:
+        return ""
+
+    palabras = [_limpiar_palabra_modelo(p) for p in titulo.split()]
+    palabras = [p for p in palabras if p]
+
+    marca_palabras = [_limpiar_palabra_modelo(p) for p in (marca or "").split()]
+    marca_palabras = [p for p in marca_palabras if p]
+
+    inicio = 0
+    if marca_palabras:
+        texto = " ".join(palabras)
+        texto_marca = " ".join(marca_palabras)
+        idx = texto.find(texto_marca)
+        if idx != -1:
+            inicio = len(texto[:idx].split()) + len(marca_palabras)
+
+    candidatas = []
+    for p in palabras[inicio:]:
+        if p in _PALABRAS_RUIDO_MODELO:
+            continue
+        if p.isdigit() and len(p) <= 2:
+            continue  # probablemente una talla suelta (ej. "8", "40"), no un modelo
+        candidatas.append(p)
+        if len(candidatas) == 2:
+            break
+
+    return " ".join(candidatas)
 
 
 def cargar_historial():
@@ -150,6 +210,94 @@ def analizar_top_racha(filas, dias=3, precio_minimo=60, top_n=5, tasas=None):
 
     candidatos.sort(key=lambda r: (r["velocidad_favoritos"], r["crecimiento_favoritos"]), reverse=True)
     return candidatos[:top_n]
+
+
+def analizar_modelos_tendencia(filas, dias=7, precio_minimo=70, min_anuncios=3, top_n=10, tasas=None):
+    """
+    A diferencia de analizar_top_racha (que mira anuncios sueltos), esto
+    agrupa por MARCA + MODELO (heurística sobre el título, ver
+    extraer_modelo) para detectar qué modelo se repite con buen interés
+    entre varios vendedores distintos — señal mucho más fiable de "esto se
+    vende bien" que un anuncio individual, que puede haber despegado por
+    razones propias de ese vendedor (mejores fotos, precio de ganga, etc).
+
+    Solo cuentan los modelos vistos en `min_anuncios` anuncios DISTINTOS
+    o más dentro de la ventana de `dias`.
+    """
+    if not filas:
+        return []
+
+    tasas = tasas or {"EUR": 1.0}
+    limite = datetime.now() - timedelta(days=dias)
+    filas_periodo = [f for f in filas if f["fecha_escaneo"] >= limite]
+
+    por_item = defaultdict(list)
+    for f in filas_periodo:
+        por_item[f["item_id"]].append(f)
+
+    resumen_items = []
+    for item_id, apariciones in por_item.items():
+        apariciones.sort(key=lambda x: x["fecha_escaneo"])
+        primera, ultima = apariciones[0], apariciones[-1]
+
+        try:
+            precio_original = float(ultima["precio"])
+        except (TypeError, ValueError):
+            continue
+        moneda = ultima.get("moneda", "EUR")
+        tasa = tasas.get(moneda, 1.0) or 1.0
+        precio_eur = precio_original / tasa
+        if precio_eur < precio_minimo:
+            continue
+
+        marca = (ultima.get("marca") or "").strip()
+        modelo = extraer_modelo(ultima.get("titulo", ""), marca)
+        if not modelo:
+            continue
+
+        favoritos_ahora = int(ultima["favoritos"] or 0)
+        favoritos_primera = int(primera["favoritos"] or 0)
+        horas = (ultima["fecha_escaneo"] - primera["fecha_escaneo"]).total_seconds() / 3600
+        velocidad = (favoritos_ahora - favoritos_primera) / (horas + 1) if len(apariciones) >= 2 else 0.0
+
+        resumen_items.append({
+            "item_id": item_id,
+            "marca": marca,
+            "modelo": modelo,
+            "precio_eur": precio_eur,
+            "favoritos": favoritos_ahora,
+            "velocidad": velocidad,
+            "titulo": ultima.get("titulo", ""),
+            "url": ultima.get("url", ""),
+        })
+
+    grupos = defaultdict(list)
+    for r in resumen_items:
+        grupos[(r["marca"], r["modelo"])].append(r)
+
+    tendencias = []
+    for (marca, modelo), items in grupos.items():
+        if len({i["item_id"] for i in items}) < min_anuncios:
+            continue
+
+        velocidad_media = sum(i["velocidad"] for i in items) / len(items)
+        favoritos_media = sum(i["favoritos"] for i in items) / len(items)
+        precio_medio = sum(i["precio_eur"] for i in items) / len(items)
+        ejemplo = max(items, key=lambda i: i["favoritos"])
+
+        tendencias.append({
+            "marca": marca,
+            "modelo": modelo,
+            "num_anuncios": len({i["item_id"] for i in items}),
+            "velocidad_media": round(velocidad_media, 2),
+            "favoritos_media": round(favoritos_media, 1),
+            "precio_medio_eur": round(precio_medio, 1),
+            "ejemplo_titulo": ejemplo["titulo"],
+            "ejemplo_url": ejemplo["url"],
+        })
+
+    tendencias.sort(key=lambda t: (t["velocidad_media"], t["num_anuncios"]), reverse=True)
+    return tendencias[:top_n]
 
 
 if __name__ == "__main__":

@@ -8,7 +8,13 @@ visto en más de un escaneo, cuánto les han subido los favoritos.
 
 import os
 import requests
-from analizar import ARCHIVO_HISTORIAL, cargar_historial, analizar_interes, analizar_top_racha
+from analizar import (
+    ARCHIVO_HISTORIAL,
+    cargar_historial,
+    analizar_interes,
+    analizar_top_racha,
+    analizar_modelos_tendencia,
+)
 from telegram_bot import enviar_mensaje, enviar_foto
 from collections import defaultdict
 
@@ -192,6 +198,46 @@ def enviar_top_racha_telegram(filas, chat_id=None, dias=EDAD_MAXIMA_DIAS):
                 enviar_mensaje(caption, chat_id=chat_id)
         else:
             enviar_mensaje(caption, chat_id=chat_id)
+
+
+def enviar_modelos_tendencia_telegram(filas, chat_id=None, dias=EDAD_MAXIMA_DIAS):
+    """
+    A diferencia de /resumen y /top (que muestran anuncios sueltos), esto
+    agrupa por marca+modelo para enseñar qué SE REPITE como tendencia entre
+    varios vendedores distintos — la señal más fiable de "esto se vende
+    bien", útil para decidir qué buscar al comprar para revender.
+    """
+    tasas = obtener_tasas_cambio()
+    tendencias = analizar_modelos_tendencia(
+        filas, dias=dias, precio_minimo=PRECIO_MINIMO, min_anuncios=3, top_n=10, tasas=tasas
+    )
+
+    if not tendencias:
+        enviar_mensaje(
+            f"🏆 Modelos en tendencia (últimos {dias} días)\n\n"
+            f"Todavía no hay ningún modelo visto en 3+ anuncios distintos de ≥{PRECIO_MINIMO}€ "
+            "en este periodo. Prueba más tarde.",
+            chat_id=chat_id,
+        )
+        return
+
+    enviar_mensaje(
+        f"🏆 Modelos en tendencia (últimos {dias} días)\n\n"
+        "Marca + modelo que se repite con buen interés entre varios vendedores "
+        "distintos (no solo un anuncio suelto con suerte).",
+        chat_id=chat_id,
+    )
+
+    for i, t in enumerate(tendencias, start=1):
+        caption = (
+            f"#{i} — {t['marca'] or 's/marca'} {t['modelo']}\n"
+            f"Visto en {t['num_anuncios']} anuncios distintos\n"
+            f"Favoritos medios: {t['favoritos_media']} | Ritmo medio: {t['velocidad_media']} favs/h\n"
+            f"Precio medio: ~{t['precio_medio_eur']}€\n"
+            f"Ejemplo: {t['ejemplo_titulo']}\n"
+            f"{t['ejemplo_url']}"
+        )
+        enviar_mensaje(caption, chat_id=chat_id)
 
 
 if __name__ == "__main__":
