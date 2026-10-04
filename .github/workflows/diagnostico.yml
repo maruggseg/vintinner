@@ -1,0 +1,61 @@
+name: Diagnóstico enlaces rotos (perfil vacío)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Comprobar enlace de item y de perfil de vendedor
+        run: |
+          python3 -c "
+          import json
+          from vinted_api import crear_sesion_autenticada, buscar_por_categoria
+
+          sesion = crear_sesion_autenticada()
+          if sesion is None:
+              print('No se pudo crear sesión')
+              raise SystemExit(1)
+
+          items = buscar_por_categoria(sesion, '2632', pagina=1, por_pagina=5, precio_desde=70)
+          print('Items recibidos:', len(items))
+          if not items:
+              raise SystemExit(1)
+
+          item = items[0]
+          print()
+          print('=== Item completo ===')
+          print(json.dumps(item, indent=2, ensure_ascii=False))
+
+          user = item.get('user') or {}
+          user_id = user.get('id')
+          user_login = user.get('login')
+          item_path = item.get('url')
+
+          print()
+          print(f'item_id={item.get(\"id\")}  user_id={user_id}  user_login={user_login}')
+          print(f'item_path (relativo)={item_path}')
+
+          # 1) ¿Funciona el enlace del item tal cual lo construye escanear.py?
+          url_item = f'https://www.vinted.es{item_path}'
+          print()
+          print(f'--- Probando URL del item: {url_item}')
+          r1 = sesion.get(url_item, timeout=10, allow_redirects=True)
+          print('Status:', r1.status_code, '| URL final tras redirecciones:', r1.url)
+          print('Primeros 300 chars del body:', r1.text[:300].replace(chr(10), ' '))
+
+          # 2) ¿Funciona el enlace del perfil del vendedor?
+          if user_id and user_login:
+              url_perfil = f'https://www.vinted.es/member/{user_id}-{user_login}'
+              print()
+              print(f'--- Probando URL del perfil: {url_perfil}')
+              r2 = sesion.get(url_perfil, timeout=10, allow_redirects=True)
+              print('Status:', r2.status_code, '| URL final tras redirecciones:', r2.url)
+              print('Primeros 300 chars del body:', r2.text[:300].replace(chr(10), ' '))
+          "
