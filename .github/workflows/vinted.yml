@@ -10,6 +10,15 @@ on:
 permissions:
   contents: write   # necesario para que el workflow pueda guardar historial.csv y el offset
 
+# Evita que dos ejecuciones corran a la vez. Si el disparador externo (cada
+# 10 min) llega mientras la anterior sigue en cola/corriendo, esta espera
+# en vez de solaparse — antes chocaban al hacer "git push" ("cannot lock
+# ref") porque GitHub a veces tarda varios minutos en arrancar una
+# ejecución, y para entonces ya había llegado la siguiente.
+concurrency:
+  group: vinted-bot-main
+  cancel-in-progress: false
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -33,5 +42,8 @@ jobs:
           git config user.email "vinted-bot@users.noreply.github.com"
           git add data/historial.csv
           git commit -m "Actualizar datos" || echo "Sin cambios que guardar"
-          git pull --rebase origin main
-          git push
+          for intento in 1 2 3 4 5; do
+            git pull --rebase origin main && git push && break
+            echo "Push falló (intento $intento), reintentando..."
+            sleep $((intento * 3))
+          done
