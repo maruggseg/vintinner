@@ -47,7 +47,7 @@ jobs:
           git add data/historial.csv
           git commit -m "Actualizar datos" || echo "Sin cambios que guardar"
           for intento in 1 2 3 4 5; do
-            git pull --rebase origin main && git push && break
+            git pull --rebase --depth=1 origin main && git push && break
             echo "Push falló (intento $intento), reintentando..."
             sleep $((intento * 3))
           done
