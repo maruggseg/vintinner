@@ -28,16 +28,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
+      # En este runner (self-hosted en Fly.io) usamos el Python que ya
+      # trae la imagen en vez de actions/setup-python: esa acción se
+      # quedaba colgada varios minutos descargando/instalando una build
+      # de Python, probablemente por los recursos limitados de la
+      # máquina (512 MB RAM, shared-cpu-1x).
       - name: Instalar dependencias
-        run: pip install -r requirements.txt
+        run: python3 -m pip install --user -r requirements.txt
 
       - name: Escanear Vinted
         if: github.event.schedule == '*/10 * * * *' || github.event_name == 'workflow_dispatch'
-        run: python escanear.py
+        run: python3 escanear.py
 
       - name: Guardar cambios (historial y offset)
         run: |
