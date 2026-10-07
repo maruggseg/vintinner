@@ -21,7 +21,10 @@ concurrency:
 
 jobs:
   run:
-    runs-on: ubuntu-latest
+    # Runner auto-alojado en Fly.io (región Madrid), para que las
+    # peticiones a Vinted salgan con IP española en vez de la IP de los
+    # runners normales de GitHub (que daba resultados de UK/USA).
+    runs-on: [self-hosted, spain]
     steps:
       - uses: actions/checkout@v4
 
