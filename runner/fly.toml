@@ -1,0 +1,32 @@
+# Configuración de Fly.io para alojar un "self-hosted runner" de GitHub
+# Actions en Madrid. Así el scraping de Vinted sale desde una IP española
+# en vez de la IP (normalmente de EE.UU./UK) de los runners normales de
+# GitHub ("ubuntu-latest").
+#
+# Usa una imagen ya hecha (myoung34/github-runner) que se encarga de
+# registrar el runner en el repo automáticamente al arrancar, usando el
+# token que se pasa como "secret" (nunca va en este archivo ni en el repo).
+#
+# Despliegue (desde esta carpeta, con flyctl instalado y sesión iniciada):
+#   fly launch --no-deploy --copy-config --name vintinner-runner
+#   fly secrets set ACCESS_TOKEN=xxxxx   (el PAT, se pide en la terminal, nunca se pega en el chat)
+#   fly deploy
+
+app = "vintinner-runner"
+primary_region = "mad"
+
+[build]
+  image = "myoung34/github-runner:latest"
+
+[env]
+  REPO_URL = "https://github.com/maruggseg/vintinner"
+  RUNNER_SCOPE = "repo"
+  RUNNER_NAME = "fly-madrid"
+  RUNNER_WORKDIR = "/tmp/runner"
+  LABELS = "self-hosted,spain"
+  EPHEMERAL = "false"
+  DISABLE_AUTO_UPDATE = "true"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
