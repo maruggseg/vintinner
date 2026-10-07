@@ -11,6 +11,7 @@ Variable de entorno necesaria en Vercel: TELEGRAM_TOKEN
 
 import os
 import csv
+import io
 import json
 import re
 from datetime import datetime, timedelta
@@ -23,6 +24,15 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 DOMINIO_TELEGRAM = "https://api.telegram.org/bot" + TELEGRAM_TOKEN
 
 ARCHIVO_HISTORIAL = os.path.join(os.path.dirname(__file__), "..", "data", "historial.csv")
+
+# El historial.csv cambia cada ~10 min (lo actualiza el escaneo automático),
+# pero Vercel solo empaqueta el archivo con el código en cada despliegue —
+# si no redespliega a tiempo (o se queda sin cuota de build), el bot
+# respondería con datos viejos sin avisar. Para evitarlo, lo descargamos en
+# vivo de GitHub en cada petición (con "?_=timestamp" para saltarnos
+# cualquier caché), y solo caemos al archivo local empaquetado si GitHub no
+# responde.
+URL_HISTORIAL_GITHUB = "https://raw.githubusercontent.com/maruggseg/vintinner/main/data/historial.csv"
 PRECIO_MINIMO = 70
 EDAD_MAXIMA_DIAS = 7  # ignoramos anuncios que llevamos rastreando más tiempo que esto: ya no son "nuevos"
 
@@ -62,14 +72,29 @@ def enviar_foto(foto_url, caption, chat_id):
 
 
 def cargar_historial():
+    texto = None
+    try:
+        resp = requests.get(
+            URL_HISTORIAL_GITHUB,
+            params={"_": int(datetime.now().timestamp())},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            texto = resp.text
+    except requests.RequestException:
+        pass
+
+    if texto is None:
+        if not os.path.exists(ARCHIVO_HISTORIAL):
+            return []
+        with open(ARCHIVO_HISTORIAL, newline="", encoding="utf-8") as f:
+            texto = f.read()
+
     filas = []
-    if not os.path.exists(ARCHIVO_HISTORIAL):
-        return filas
-    with open(ARCHIVO_HISTORIAL, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for fila in reader:
-            fila["fecha_escaneo"] = datetime.fromisoformat(fila["fecha_escaneo"])
-            filas.append(fila)
+    reader = csv.DictReader(io.StringIO(texto))
+    for fila in reader:
+        fila["fecha_escaneo"] = datetime.fromisoformat(fila["fecha_escaneo"])
+        filas.append(fila)
     return filas
 
 
