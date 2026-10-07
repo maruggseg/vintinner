@@ -1,7 +1,11 @@
 # Configuración de Fly.io para alojar un "self-hosted runner" de GitHub
-# Actions en Madrid. Así el scraping de Vinted sale desde una IP española
-# en vez de la IP (normalmente de EE.UU./UK) de los runners normales de
-# GitHub ("ubuntu-latest").
+# Actions en la UE (región de París). Así el scraping de Vinted sale
+# desde una IP europea en vez de la IP (normalmente de EE.UU./UK) de los
+# runners normales de GitHub ("ubuntu-latest").
+#
+# Nota: Fly.io dejó de admitir la región de Madrid ("mad" está
+# deprecada, no se pueden crear recursos nuevos ahí). Usamos París
+# ("cdg") en su lugar — vale cualquier país de la UE para este caso.
 #
 # Usa una imagen ya hecha (myoung34/github-runner) que se encarga de
 # registrar el runner en el repo automáticamente al arrancar, usando el
@@ -10,10 +14,10 @@
 # Despliegue (desde esta carpeta, con flyctl instalado y sesión iniciada):
 #   fly launch --no-deploy --copy-config --name vintinner-runner
 #   fly secrets set ACCESS_TOKEN=xxxxx   (el PAT, se pide en la terminal, nunca se pega en el chat)
-#   fly deploy
+#   fly deploy --primary-region cdg
 
 app = "vintinner-runner"
-primary_region = "mad"
+primary_region = "cdg"
 
 [build]
   image = "myoung34/github-runner:latest"
@@ -21,9 +25,9 @@ primary_region = "mad"
 [env]
   REPO_URL = "https://github.com/maruggseg/vintinner"
   RUNNER_SCOPE = "repo"
-  RUNNER_NAME = "fly-madrid"
+  RUNNER_NAME = "fly-eu"
   RUNNER_WORKDIR = "/tmp/runner"
-  LABELS = "self-hosted,spain"
+  LABELS = "self-hosted,eu"
   DISABLE_AUTO_UPDATE = "true"
   # Importante: NO poner aquí la variable EPHEMERAL, ni siquiera a "false".
   # Esta imagen trata la simple PRESENCIA de la variable como "activar modo

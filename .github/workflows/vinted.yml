@@ -21,10 +21,10 @@ concurrency:
 
 jobs:
   run:
-    # Runner auto-alojado en Fly.io (región Madrid), para que las
-    # peticiones a Vinted salgan con IP española en vez de la IP de los
+    # Runner auto-alojado en Fly.io (región de la UE, París), para que las
+    # peticiones a Vinted salgan con IP europea en vez de la IP de los
     # runners normales de GitHub (que daba resultados de UK/USA).
-    runs-on: [self-hosted, spain]
+    runs-on: [self-hosted, eu]
     steps:
       - uses: actions/checkout@v4
 
