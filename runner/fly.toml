@@ -24,8 +24,11 @@ primary_region = "mad"
   RUNNER_NAME = "fly-madrid"
   RUNNER_WORKDIR = "/tmp/runner"
   LABELS = "self-hosted,spain"
-  EPHEMERAL = "false"
   DISABLE_AUTO_UPDATE = "true"
+  # Importante: NO poner aquí la variable EPHEMERAL, ni siquiera a "false".
+  # Esta imagen trata la simple PRESENCIA de la variable como "activar modo
+  # efímero" (da igual el valor) — el runner hacía un trabajo y se
+  # autodestruía. Hay que dejarla completamente ausente.
 
 [[vm]]
   size = "shared-cpu-1x"
