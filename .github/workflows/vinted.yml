@@ -1,0 +1,53 @@
+name: Vinted Bot
+
+on:
+  schedule:
+    # Horas en UTC. España en verano = UTC+2, en invierno = UTC+1.
+    # Escaneos: cada 10 minutos
+    - cron: "*/10 * * * *"
+  workflow_dispatch:   # permite lanzarlo a mano desde GitHub para probar
+
+permissions:
+  contents: write   # necesario para que el workflow pueda guardar historial.csv y el offset
+
+# Evita que dos ejecuciones corran a la vez. Si el disparador externo (cada
+# 10 min) llega mientras la anterior sigue en cola/corriendo, esta espera
+# en vez de solaparse — antes chocaban al hacer "git push" ("cannot lock
+# ref") porque GitHub a veces tarda varios minutos en arrancar una
+# ejecución, y para entonces ya había llegado la siguiente.
+concurrency:
+  group: vinted-bot-main
+  cancel-in-progress: false
+
+jobs:
+  run:
+    # Runner auto-alojado en Fly.io (región de la UE, París), para que las
+    # peticiones a Vinted salgan con IP europea en vez de la IP de los
+    # runners normales de GitHub (que daba resultados de UK/USA).
+    runs-on: [self-hosted, eu]
+    steps:
+      - uses: actions/checkout@v4
+
+      # En este runner (self-hosted en Fly.io) usamos el Python que ya
+      # trae la imagen en vez de actions/setup-python: esa acción se
+      # quedaba colgada varios minutos descargando/instalando una build
+      # de Python, probablemente por los recursos limitados de la
+      # máquina (512 MB RAM, shared-cpu-1x).
+      - name: Instalar dependencias
+        run: python3 -m pip install --user -r requirements.txt
+
+      - name: Escanear Vinted
+        if: github.event.schedule == '*/10 * * * *' || github.event_name == 'workflow_dispatch'
+        run: python3 escanear.py
+
+      - name: Guardar cambios (historial y offset)
+        run: |
+          git config user.name "vinted-bot"
+          git config user.email "vinted-bot@users.noreply.github.com"
+          git add data/historial.csv
+          git commit -m "Actualizar datos" || echo "Sin cambios que guardar"
+          for intento in 1 2 3 4 5; do
+            git pull --rebase --depth=1 origin main && git push && break
+            echo "Push falló (intento $intento), reintentando..."
+            sleep $((intento * 3))
+          done

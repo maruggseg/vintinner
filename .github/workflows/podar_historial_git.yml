@@ -1,0 +1,47 @@
+name: Podar historial de git
+
+# El bot hace commit a main cada ~10 min (solo para guardar
+# data/historial.csv). Aunque vercel.json evita que eso dispare
+# despliegues, el historial de git en sí sigue creciendo sin límite —
+# cada commit guarda casi una copia completa del CSV. Si se deja crecer
+# varios días, el repo se vuelve tan pesado que Vercel ya no consigue
+# clonarlo ("Git information retrieval failed"), como ya pasó una vez.
+#
+# Este workflow poda solo el HISTORIAL de git (no los datos actuales):
+# sustituye todos los commits acumulados por uno solo con el estado
+# actual, a diario. No se pierde ningún dato vigente (el CSV ya se poda
+# solo a 7 días en escanear.py), solo el histórico de commits viejos.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"  # cada día a las 03:17 UTC
+  workflow_dispatch:  # para poder lanzarlo a mano si hace falta
+
+permissions:
+  contents: write
+
+# Mismo grupo que el workflow de escaneo: así nunca corren a la vez y
+# no hay carrera entre el push normal de datos y el force-push del podado.
+concurrency:
+  group: vinted-bot-main
+  cancel-in-progress: false
+
+jobs:
+  podar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Podar historial (commit único)
+        run: |
+          git config user.name "vinted-bot"
+          git config user.email "vinted-bot@users.noreply.github.com"
+
+          git checkout --orphan squash_tmp
+          git add -A
+          git commit -m "Podar historial de git (automático)"
+          git branch -D main
+          git branch -m main
+          git push -f origin main
