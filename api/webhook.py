@@ -545,6 +545,7 @@ def datos_web():
     return {
         "actualizado": escaneos[-1].isoformat() if escaneos else None,
         "num_escaneos": len(escaneos),
+        "num_activos": len(resumen),
         "precio_minimo": PRECIO_MINIMO,
         "dias": EDAD_MAXIMA_DIAS,
         "resumen": resumen[:120],
