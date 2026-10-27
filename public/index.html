@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vintinner</title>
+<meta name="description" content="Zapatillas de mujer que más se mueven en Vinted ahora mismo">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #16181d; --muted: #646b78;
+    --border: #e3e6eb; --accent: #0b8a7a; --accent-soft: #e2f4f1;
+    --green: #1f8a4c; --yellow: #a87400; --red: #c23a3a;
+    --green-bg: #e3f4ea; --yellow-bg: #fbf1dc; --red-bg: #fae4e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101216; --card: #191c22; --text: #eceef2; --muted: #9aa1ad;
+      --border: #2a2e37; --accent: #3cc4b0; --accent-soft: #163632;
+      --green: #5fd38f; --yellow: #f0bf4c; --red: #f07b7b;
+      --green-bg: #173225; --yellow-bg: #352a11; --red-bg: #3a1c1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5; background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 0 8px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  #estado { color: var(--muted); font-size: 13px; }
+  nav { display: flex; gap: 4px; overflow-x: auto; }
+  nav button {
+    border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600;
+    padding: 10px 14px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+  }
+  nav button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .filtros { display: flex; gap: 8px; flex-wrap: wrap; padding: 14px 0 4px; }
+  .filtros input, .filtros select {
+    font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card); color: var(--text); min-width: 0;
+  }
+  .filtros input[type=search] { flex: 1 1 200px; }
+  .filtros input[type=number] { width: 130px; }
+  .intro { color: var(--muted); font-size: 14px; margin: 10px 0 14px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); padding-bottom: 40px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; display: flex; flex-direction: column; color: inherit; text-decoration: none;
+  }
+  a.card:hover { border-color: var(--accent); }
+  .card img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; background: var(--border); display: block; color: transparent; }
+  .card .cuerpo { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .titulo { font-weight: 600; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .marca { color: var(--muted); font-size: 13px; }
+  .precio { font-size: 18px; font-weight: 700; }
+  .dato { font-size: 13px; color: var(--muted); }
+  .dato b { color: var(--text); font-weight: 600; }
+  .chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .modelos { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .modelo { flex-direction: row; }
+  .modelo img { width: 110px; aspect-ratio: auto; flex: none; }
+  .comp { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; align-self: flex-start; }
+  .comp.baja { background: var(--green-bg); color: var(--green); }
+  .comp.media { background: var(--yellow-bg); color: var(--yellow); }
+  .comp.alta, .comp.saturado { background: var(--red-bg); color: var(--red); }
+  .marcas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .vacio { color: var(--muted); padding: 40px 0; text-align: center; }
+  @media (max-width: 520px) {
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .modelos { grid-template-columns: 1fr; }
+    .card .cuerpo { padding: 8px 10px 10px; }
+    .precio { font-size: 16px; }
+    .filtros input[type=number] { width: calc(50% - 4px); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <h1>Vintinner</h1>
+      <span id="estado">Cargando…</span>
+    </div>
+    <nav role="tablist">
+      <button role="tab" data-vista="resumen" aria-selected="true">Ahora</button>
+      <button role="tab" data-vista="top" aria-selected="false">Más subida</button>
+      <button role="tab" data-vista="modelos" aria-selected="false">Modelos</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="filtros">
+    <input type="search" id="f-texto" placeholder="Buscar marca o modelo…">
+    <input type="number" id="f-min" placeholder="Precio mín €" min="0" inputmode="numeric">
+    <input type="number" id="f-max" placeholder="Precio máx €" min="0" inputmode="numeric">
+    <select id="f-talla"><option value="">Todas las tallas</option></select>
+  </div>
+  <p class="intro" id="intro"></p>
+  <div id="marcas" class="marcas"></div>
+  <div id="lista" class="grid"></div>
+</main>
+
+<script>
+const INTROS = {
+  resumen: "Anuncios activos ahora mismo, ordenados por lo rápido que están ganando favoritos.",
+  top: "Los que más favoritos han ganado en los últimos días (necesitan haberse visto en 2+ escaneos).",
+  modelos: "Marca + modelo que se repite con interés entre varios vendedores: precio de venta, competencia y tallas.",
+};
+const COMPETENCIA = {
+  baja: "🟢 Poca competencia y buena demanda",
+  media: "🟡 Competencia media",
+  alta: "🔴 Mucha competencia (se mueve bien)",
+  saturado: "🔴 Saturado",
+};
+let datos = null;
+let vista = "resumen";
+
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs = {}, ...hijos) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else n.setAttribute(k, v);
+  }
+  for (const h of hijos) if (h != null) n.append(h);
+  return n;
+}
+// Solo enlaces e imágenes https: los títulos y URLs vienen de anuncios de terceros.
+const seguro = (u) => (typeof u === "string" && u.startsWith("https://")) ? u : null;
+const euros = (n) => `${Math.round(n)} €`;
+
+function img(src, alt) {
+  const s = seguro(src);
+  return s ? el("img", { src: s, alt: alt || "", loading: "lazy", referrerpolicy: "no-referrer" }) : el("img", { alt: "" });
+}
+
+function pasaFiltros(texto, precio, talla) {
+  const q = $("f-texto").value.trim().toLowerCase();
+  const min = parseFloat($("f-min").value), max = parseFloat($("f-max").value);
+  const t = $("f-talla").value;
+  if (q && !texto.toLowerCase().includes(q)) return false;
+  if (!isNaN(min) && precio < min) return false;
+  if (!isNaN(max) && precio > max) return false;
+  if (t && talla !== undefined && talla !== t) return false;
+  return true;
+}
+
+function tarjetaAnuncio(r, linea) {
+  const url = seguro(r.url);
+  const card = el(url ? "a" : "div", url ? { class: "card", href: url, target: "_blank", rel: "noopener noreferrer" } : { class: "card" },
+    img(r.foto_url, r.titulo),
+    el("div", { class: "cuerpo" },
+      el("div", { class: "titulo" }, r.titulo || ""),
+      el("div", { class: "marca" }, (r.marca || "s/marca") + (r.talla ? ` · talla ${r.talla}` : "")),
+      el("div", { class: "precio" }, euros(r.precio_eur)),
+      linea,
+    ),
+  );
+  return card;
+}
+
+function pintarResumen(lista) {
+  return lista.filter(r => pasaFiltros(`${r.marca} ${r.titulo}`, r.precio_eur, r.talla)).map(r =>
+    tarjetaAnuncio(r, el("div", { class: "dato" },
+      el("b", {}, `${r.favoritos} favs`),
+      r.num_apariciones >= 2 ? ` · +${r.crecimiento} en ${r.horas} h` : " · recién detectado",
+    ))
+  );
+}
+
+function pintarTop(lista) {
+  return lista.filter(r => pasaFiltros(`${r.marca} ${r.titulo}`, r.precio_eur, r.talla)).map(r =>
+    tarjetaAnuncio(r, el("div", { class: "dato" },
+      el("b", {}, `+${r.crecimiento} favs`), ` en ${r.horas} h (${r.favoritos_inicio} → ${r.favoritos_ahora})`,
+    ))
+  );
+}
+
+function pintarModelos(lista) {
+  const talla = $("f-talla").value;
+  return lista
+    .filter(t => pasaFiltros(`${t.marca} ${t.modelo}`, t.precio_mediana, undefined))
+    .filter(t => !talla || t.tallas_top.some(([tt]) => tt === talla))
+    .map(t => {
+      const url = seguro(t.ejemplo_url);
+      const tallas = t.tallas_top.length
+        ? el("div", { class: "dato" }, "Tallas con más interés: ", el("b", {}, t.tallas_top.map(([tt, f]) => `${tt} (${f})`).join(", ")))
+        : null;
+      return el(url ? "a" : "div", url ? { class: "card modelo", href: url, target: "_blank", rel: "noopener noreferrer" } : { class: "card modelo" },
+        img(t.ejemplo_foto_url, t.ejemplo_titulo),
+        el("div", { class: "cuerpo" },
+          el("div", { class: "titulo" }, `${t.marca} ${t.modelo}`),
+          el("div", { class: "precio" }, euros(t.precio_mediana)),
+          el("div", { class: "dato" }, `Normal entre ${euros(t.precio_p25)} y ${euros(t.precio_p75)}`),
+          t.competencia_nivel ? el("span", { class: `comp ${t.competencia_nivel}` }, COMPETENCIA[t.competencia_nivel]) : null,
+          el("div", { class: "dato" }, el("b", {}, `${t.num_anuncios} anuncios`), ` · ${t.favoritos_media} favs de media · ${t.velocidad_media} favs/h`),
+          tallas,
+        ),
+      );
+    });
+}
+
+function pintar() {
+  if (!datos) return;
+  $("intro").textContent = INTROS[vista];
+  const lista = $("lista");
+  lista.className = vista === "modelos" ? "grid modelos" : "grid";
+  const marcas = $("marcas");
+  marcas.replaceChildren(...(vista === "resumen"
+    ? datos.marcas.slice(0, 10).map(m => el("span", { class: "chip" }, `${m.marca} · ${m.favoritos_media} favs`))
+    : []));
+  const nodos = vista === "resumen" ? pintarResumen(datos.resumen)
+    : vista === "top" ? pintarTop(datos.top) : pintarModelos(datos.modelos);
+  lista.replaceChildren(...(nodos.length ? nodos : [el("div", { class: "vacio" },
+    vista === "resumen" ? "No hay anuncios con estos filtros."
+      : "Todavía no hay datos suficientes (hacen falta varios escaneos). Vuelve en unas horas.")]));
+}
+
+function rellenarTallas() {
+  const tallas = new Set();
+  for (const r of [...datos.resumen, ...datos.top]) if (/^\d+(\.\d+)?$/.test(r.talla || "")) tallas.add(r.talla);
+  const sel = $("f-talla");
+  [...tallas].sort((a, b) => parseFloat(a) - parseFloat(b))
+    .forEach(t => sel.append(el("option", { value: t }, t)));
+}
+
+async function cargar() {
+  try {
+    const resp = await fetch("/api/webhook");
+    if (!resp.ok) throw new Error(resp.status);
+    datos = await resp.json();
+    const f = datos.actualizado ? new Date(datos.actualizado + "Z") : null;
+    $("estado").textContent = f
+      ? `Último escaneo: ${f.toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · solo ≥${datos.precio_minimo} €`
+      : "Sin escaneos todavía";
+    rellenarTallas();
+    pintar();
+  } catch (e) {
+    $("estado").textContent = "No se pudieron cargar los datos. Recarga la página.";
+  }
+}
+
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  vista = b.dataset.vista;
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  pintar();
+}));
+["f-texto", "f-min", "f-max", "f-talla"].forEach(id => $(id).addEventListener("input", pintar));
+cargar();
+</script>
+</body>
+</html>

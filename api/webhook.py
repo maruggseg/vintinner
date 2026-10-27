@@ -203,19 +203,12 @@ def simbolo_moneda(moneda) -> str:
     return SIMBOLOS_MONEDA.get(moneda, f" {moneda}")
 
 
-def comando_resumen(chat_id):
-    filas = cargar_historial()
-    if not filas:
-        enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id)
-        return
-
+def calcular_resumen(filas, tasas):
+    """Anuncios activos en el último escaneo, ordenados por ritmo de favoritos."""
     escaneos = sorted(set(f["fecha_escaneo"] for f in filas))
-    if len(escaneos) < 2:
-        enviar_mensaje(f"Solo hay {len(escaneos)} escaneo(s) todavía. Prueba más tarde.", chat_id)
-        return
-
+    if not escaneos:
+        return escaneos, []
     ultimo = escaneos[-1]
-    tasas = obtener_tasas_cambio()
     por_item = defaultdict(list)
     for f in filas:
         por_item[f["item_id"]].append(f)
@@ -241,6 +234,8 @@ def comando_resumen(chat_id):
         resultados.append({
             "titulo": ultima["titulo"], "marca": ultima["marca"], "precio": ultima["precio"],
             "moneda": ultima.get("moneda", "EUR"),
+            "precio_eur": round(_precio_en_eur(ultima["precio"], ultima.get("moneda"), tasas), 2),
+            "talla": (ultima.get("talla") or "").strip(),
             "favoritos": fav_ahora, "crecimiento": crecimiento, "horas": round(horas, 1),
             "velocidad": round(velocidad, 2), "url": ultima["url"], "foto_url": ultima.get("foto_url", ""),
             "num_apariciones": len(apariciones),
@@ -248,6 +243,167 @@ def comando_resumen(chat_id):
 
     # Primero velocidad (lo que "se mueve" ahora), favoritos totales como desempate.
     resultados.sort(key=lambda r: (r["velocidad"], r["favoritos"]), reverse=True)
+    return escaneos, resultados
+
+
+def ranking_marcas(resultados, n=8):
+    por_marca = defaultdict(list)
+    for r in resultados:
+        if r["marca"]:
+            por_marca[r["marca"]].append(r["favoritos"])
+    ranking = sorted(por_marca.items(), key=lambda kv: sum(kv[1]) / len(kv[1]), reverse=True)[:n]
+    return [
+        {"marca": marca, "favoritos_media": round(sum(favs) / len(favs), 2), "num_anuncios": len(favs)}
+        for marca, favs in ranking
+    ]
+
+
+def calcular_top(filas, tasas, dias=EDAD_MAXIMA_DIAS):
+    """Anuncios que más favoritos han ganado (y más rápido) en los últimos `dias`."""
+    limite = datetime.now() - timedelta(days=dias)
+    por_item = defaultdict(list)
+    for f in filas:
+        if f["fecha_escaneo"] >= limite:
+            por_item[f["item_id"]].append(f)
+
+    candidatos = []
+    for item_id, apariciones in por_item.items():
+        apariciones.sort(key=lambda x: x["fecha_escaneo"])
+        if len(apariciones) < 2:
+            continue
+        if not _precio_valido(apariciones[-1]["precio"], apariciones[-1].get("moneda"), tasas):
+            continue
+
+        primera, ultima = apariciones[0], apariciones[-1]
+        fav_inicio = int(primera["favoritos"] or 0)
+        fav_ahora = int(ultima["favoritos"] or 0)
+        crecimiento = fav_ahora - fav_inicio
+        if crecimiento <= 0:
+            continue
+
+        horas = (ultima["fecha_escaneo"] - primera["fecha_escaneo"]).total_seconds() / 3600
+        velocidad = crecimiento / (horas + 1)
+
+        candidatos.append({
+            "titulo": ultima["titulo"], "marca": ultima["marca"], "precio": ultima["precio"],
+            "moneda": ultima.get("moneda", "EUR"),
+            "precio_eur": round(_precio_en_eur(ultima["precio"], ultima.get("moneda"), tasas), 2),
+            "talla": (ultima.get("talla") or "").strip(),
+            "favoritos_inicio": fav_inicio, "favoritos_ahora": fav_ahora, "crecimiento": crecimiento,
+            "horas": round(horas, 1), "velocidad": round(velocidad, 2), "url": ultima["url"],
+            "foto_url": ultima.get("foto_url", ""),
+        })
+
+    candidatos.sort(key=lambda r: (r["velocidad"], r["crecimiento"]), reverse=True)
+    return candidatos
+
+
+def calcular_modelos(filas, tasas, dias=EDAD_MAXIMA_DIAS, min_anuncios=3):
+    """
+    A diferencia de /resumen y /top (anuncios sueltos), agrupa por
+    marca+modelo (heurística sobre el título) para ver qué modelo se
+    repite con buen interés entre varios vendedores distintos — señal más
+    fiable de "esto se vende bien" que un anuncio suelto con suerte.
+    """
+    limite = datetime.now() - timedelta(days=dias)
+    por_item = defaultdict(list)
+    for f in filas:
+        if f["fecha_escaneo"] >= limite:
+            por_item[f["item_id"]].append(f)
+
+    resumen_items = []
+    for item_id, apariciones in por_item.items():
+        apariciones.sort(key=lambda x: x["fecha_escaneo"])
+        primera, ultima = apariciones[0], apariciones[-1]
+
+        precio_eur = _precio_en_eur(ultima["precio"], ultima.get("moneda"), tasas)
+        if precio_eur < PRECIO_MINIMO:
+            continue
+
+        marca = (ultima.get("marca") or "").strip()
+        if marca.lower() in _MARCAS_GENERICAS:
+            continue
+        modelo = extraer_modelo(ultima.get("titulo", ""), marca)
+        if not modelo:
+            continue
+
+        fav_ahora = int(ultima["favoritos"] or 0)
+        fav_inicio = int(primera["favoritos"] or 0)
+        horas = (ultima["fecha_escaneo"] - primera["fecha_escaneo"]).total_seconds() / 3600
+        velocidad = (fav_ahora - fav_inicio) / (horas + 1) if len(apariciones) >= 2 else 0.0
+
+        resumen_items.append({
+            "item_id": item_id, "marca": marca, "modelo": modelo,
+            "precio_eur": precio_eur, "favoritos": fav_ahora, "velocidad": velocidad,
+            "talla": (ultima.get("talla") or "").strip(),
+            "titulo": ultima.get("titulo", ""), "url": ultima.get("url", ""),
+            "foto_url": ultima.get("foto_url", ""),
+        })
+
+    grupos = defaultdict(list)
+    for r in resumen_items:
+        grupos[(r["marca"], r["modelo"])].append(r)
+
+    tendencias = []
+    for (marca, modelo), items in grupos.items():
+        if len({i["item_id"] for i in items}) < min_anuncios:
+            continue
+        velocidad_media = sum(i["velocidad"] for i in items) / len(items)
+        favoritos_media = sum(i["favoritos"] for i in items) / len(items)
+        precios = sorted(i["precio_eur"] for i in items)
+        ejemplo = max(items, key=lambda i: i["favoritos"])
+        tendencias.append({
+            "marca": marca, "modelo": modelo,
+            "num_anuncios": len({i["item_id"] for i in items}),
+            "velocidad_media": round(velocidad_media, 2),
+            "favoritos_media": round(favoritos_media, 1),
+            "precio_mediana": round(_percentil(precios, 0.5)),
+            "precio_p25": round(_percentil(precios, 0.25)),
+            "precio_p75": round(_percentil(precios, 0.75)),
+            "tallas_top": _tallas_top(items),
+            "ejemplo_titulo": ejemplo["titulo"], "ejemplo_url": ejemplo["url"],
+            "ejemplo_foto_url": ejemplo["foto_url"],
+        })
+
+    # La competencia se mide en relación al resto de modelos en tendencia:
+    # un número absoluto de anuncios no dice nada sin saber qué es "normal".
+    if len(tendencias) >= 4:
+        num_ordenados = sorted(t["num_anuncios"] for t in tendencias)
+        med_anuncios = _percentil(num_ordenados, 0.5)
+        p75_anuncios = _percentil(num_ordenados, 0.75)
+        med_favs = statistics.median(t["favoritos_media"] for t in tendencias)
+        for t in tendencias:
+            demanda = t["favoritos_media"] >= med_favs
+            if t["num_anuncios"] >= p75_anuncios and t["num_anuncios"] > med_anuncios:
+                t["competencia_nivel"] = "alta" if demanda else "saturado"
+            elif t["num_anuncios"] <= med_anuncios and demanda:
+                t["competencia_nivel"] = "baja"
+            else:
+                t["competencia_nivel"] = "media"
+            t["competencia"] = _TEXTO_COMPETENCIA[t["competencia_nivel"]]
+
+    tendencias.sort(key=lambda t: (t["velocidad_media"], t["num_anuncios"]), reverse=True)
+    return tendencias
+
+
+_TEXTO_COMPETENCIA = {
+    "baja": "🟢 Poca competencia y buena demanda",
+    "media": "🟡 Competencia media",
+    "alta": "🔴 Mucha competencia (aunque se mueve bien)",
+    "saturado": "🔴 Saturado: muchos anuncios y poco interés",
+}
+
+
+def comando_resumen(chat_id):
+    filas = cargar_historial()
+    if not filas:
+        enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id)
+        return
+
+    escaneos, resultados = calcular_resumen(filas, obtener_tasas_cambio())
+    if len(escaneos) < 2:
+        enviar_mensaje(f"Solo hay {len(escaneos)} escaneo(s) todavía. Prueba más tarde.", chat_id)
+        return
     top = resultados[:8]
 
     enviar_mensaje(
@@ -275,15 +431,11 @@ def comando_resumen(chat_id):
         elif not r.get("foto_url"):
             enviar_mensaje(caption, chat_id)
 
-    por_marca = defaultdict(list)
-    for r in resultados:
-        if r["marca"]:
-            por_marca[r["marca"]].append(r["favoritos"])
-    ranking = sorted(por_marca.items(), key=lambda kv: sum(kv[1]) / len(kv[1]), reverse=True)[:8]
+    ranking = ranking_marcas(resultados)
     if ranking:
         lineas = ["📈 Marcas con más interés:", ""]
-        for marca, favs in ranking:
-            lineas.append(f"- {marca}: {round(sum(favs)/len(favs), 2)} ({len(favs)} anuncios)")
+        for m in ranking:
+            lineas.append(f"- {m['marca']}: {m['favoritos_media']} ({m['num_anuncios']} anuncios)")
         enviar_mensaje("\n".join(lineas), chat_id)
 
 
@@ -293,42 +445,7 @@ def comando_top(chat_id, dias=EDAD_MAXIMA_DIAS):
         enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id)
         return
 
-    limite = datetime.now() - timedelta(days=dias)
-    filas_periodo = [f for f in filas if f["fecha_escaneo"] >= limite]
-
-    tasas = obtener_tasas_cambio()
-    por_item = defaultdict(list)
-    for f in filas_periodo:
-        por_item[f["item_id"]].append(f)
-
-    candidatos = []
-    for item_id, apariciones in por_item.items():
-        apariciones.sort(key=lambda x: x["fecha_escaneo"])
-        if len(apariciones) < 2:
-            continue
-        if not _precio_valido(apariciones[-1]["precio"], apariciones[-1].get("moneda"), tasas):
-            continue
-
-        primera, ultima = apariciones[0], apariciones[-1]
-        fav_inicio = int(primera["favoritos"] or 0)
-        fav_ahora = int(ultima["favoritos"] or 0)
-        crecimiento = fav_ahora - fav_inicio
-        if crecimiento <= 0:
-            continue
-
-        horas = (ultima["fecha_escaneo"] - primera["fecha_escaneo"]).total_seconds() / 3600
-        velocidad = crecimiento / (horas + 1)
-
-        candidatos.append({
-            "titulo": ultima["titulo"], "marca": ultima["marca"], "precio": ultima["precio"],
-            "moneda": ultima.get("moneda", "EUR"),
-            "favoritos_inicio": fav_inicio, "favoritos_ahora": fav_ahora, "crecimiento": crecimiento,
-            "horas": round(horas, 1), "velocidad": velocidad, "url": ultima["url"],
-            "foto_url": ultima.get("foto_url", ""),
-        })
-
-    candidatos.sort(key=lambda r: (r["velocidad"], r["crecimiento"]), reverse=True)
-    top = candidatos[:10]
+    top = calcular_top(filas, obtener_tasas_cambio(), dias)[:10]
 
     if not top:
         enviar_mensaje(
@@ -393,98 +510,12 @@ def _texto_modelo(posicion, t):
 
 
 def comando_modelos(chat_id, dias=EDAD_MAXIMA_DIAS, min_anuncios=3):
-    """
-    A diferencia de /resumen y /top (anuncios sueltos), agrupa por
-    marca+modelo (heurística sobre el título) para ver qué modelo se
-    repite con buen interés entre varios vendedores distintos — señal más
-    fiable de "esto se vende bien" que un anuncio suelto con suerte.
-    """
     filas = cargar_historial()
     if not filas:
         enviar_mensaje("Todavía no hay ningún escaneo guardado.", chat_id)
         return
 
-    limite = datetime.now() - timedelta(days=dias)
-    filas_periodo = [f for f in filas if f["fecha_escaneo"] >= limite]
-
-    tasas = obtener_tasas_cambio()
-    por_item = defaultdict(list)
-    for f in filas_periodo:
-        por_item[f["item_id"]].append(f)
-
-    resumen_items = []
-    for item_id, apariciones in por_item.items():
-        apariciones.sort(key=lambda x: x["fecha_escaneo"])
-        primera, ultima = apariciones[0], apariciones[-1]
-
-        precio_eur = _precio_en_eur(ultima["precio"], ultima.get("moneda"), tasas)
-        if precio_eur < PRECIO_MINIMO:
-            continue
-
-        marca = (ultima.get("marca") or "").strip()
-        if marca.lower() in _MARCAS_GENERICAS:
-            continue
-        modelo = extraer_modelo(ultima.get("titulo", ""), marca)
-        if not modelo:
-            continue
-
-        fav_ahora = int(ultima["favoritos"] or 0)
-        fav_inicio = int(primera["favoritos"] or 0)
-        horas = (ultima["fecha_escaneo"] - primera["fecha_escaneo"]).total_seconds() / 3600
-        velocidad = (fav_ahora - fav_inicio) / (horas + 1) if len(apariciones) >= 2 else 0.0
-
-        resumen_items.append({
-            "item_id": item_id, "marca": marca, "modelo": modelo,
-            "precio_eur": precio_eur, "favoritos": fav_ahora, "velocidad": velocidad,
-            "talla": (ultima.get("talla") or "").strip(),
-            "titulo": ultima.get("titulo", ""), "url": ultima.get("url", ""),
-        })
-
-    grupos = defaultdict(list)
-    for r in resumen_items:
-        grupos[(r["marca"], r["modelo"])].append(r)
-
-    tendencias = []
-    for (marca, modelo), items in grupos.items():
-        if len({i["item_id"] for i in items}) < min_anuncios:
-            continue
-        velocidad_media = sum(i["velocidad"] for i in items) / len(items)
-        favoritos_media = sum(i["favoritos"] for i in items) / len(items)
-        precios = sorted(i["precio_eur"] for i in items)
-        ejemplo = max(items, key=lambda i: i["favoritos"])
-        tendencias.append({
-            "marca": marca, "modelo": modelo,
-            "num_anuncios": len({i["item_id"] for i in items}),
-            "velocidad_media": round(velocidad_media, 2),
-            "favoritos_media": round(favoritos_media, 1),
-            "precio_mediana": round(_percentil(precios, 0.5)),
-            "precio_p25": round(_percentil(precios, 0.25)),
-            "precio_p75": round(_percentil(precios, 0.75)),
-            "tallas_top": _tallas_top(items),
-            "ejemplo_titulo": ejemplo["titulo"], "ejemplo_url": ejemplo["url"],
-        })
-
-    # La competencia se mide en relación al resto de modelos en tendencia:
-    # un número absoluto de anuncios no dice nada sin saber qué es "normal".
-    if len(tendencias) >= 4:
-        num_ordenados = sorted(t["num_anuncios"] for t in tendencias)
-        med_anuncios = _percentil(num_ordenados, 0.5)
-        p75_anuncios = _percentil(num_ordenados, 0.75)
-        med_favs = statistics.median(t["favoritos_media"] for t in tendencias)
-        for t in tendencias:
-            demanda = t["favoritos_media"] >= med_favs
-            if t["num_anuncios"] >= p75_anuncios and t["num_anuncios"] > med_anuncios:
-                t["competencia"] = (
-                    "🔴 Mucha competencia (aunque se mueve bien)" if demanda
-                    else "🔴 Saturado: muchos anuncios y poco interés"
-                )
-            elif t["num_anuncios"] <= med_anuncios and demanda:
-                t["competencia"] = "🟢 Poca competencia y buena demanda"
-            else:
-                t["competencia"] = "🟡 Competencia media"
-
-    tendencias.sort(key=lambda t: (t["velocidad_media"], t["num_anuncios"]), reverse=True)
-    tendencias = tendencias[:10]
+    tendencias = calcular_modelos(filas, obtener_tasas_cambio(), dias, min_anuncios)[:10]
 
     if not tendencias:
         enviar_mensaje(
@@ -506,7 +537,35 @@ def comando_modelos(chat_id, dias=EDAD_MAXIMA_DIAS, min_anuncios=3):
         enviar_mensaje(_texto_modelo(i, t), chat_id)
 
 
+def datos_web():
+    """Todo lo que muestra la página web, en un solo JSON."""
+    filas = cargar_historial()
+    tasas = obtener_tasas_cambio()
+    escaneos, resumen = calcular_resumen(filas, tasas)
+    return {
+        "actualizado": escaneos[-1].isoformat() if escaneos else None,
+        "num_escaneos": len(escaneos),
+        "precio_minimo": PRECIO_MINIMO,
+        "dias": EDAD_MAXIMA_DIAS,
+        "resumen": resumen[:120],
+        "marcas": ranking_marcas(resumen, n=15),
+        "top": calcular_top(filas, tasas)[:120],
+        "modelos": calcular_modelos(filas, tasas)[:40],
+    }
+
+
 class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        # La web (public/index.html) pide aquí los datos ya calculados.
+        cuerpo = json.dumps(datos_web(), ensure_ascii=False).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        # Los datos cambian cada ~10 min: la CDN de Vercel puede servir
+        # la misma respuesta 5 min sin volver a calcular.
+        self.send_header("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600")
+        self.end_headers()
+        self.wfile.write(cuerpo)
+
     def do_POST(self):
         try:
             longitud = int(self.headers.get("Content-Length", 0))
