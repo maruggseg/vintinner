@@ -1,0 +1,17 @@
+{
+  "name": "Vintinner — zapatillas que se venden en Vinted",
+  "short_name": "Vintinner",
+  "description": "Las zapatillas de mujer que más se mueven en Vinted ahora mismo",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d0f14",
+  "theme_color": "#ff5a3c",
+  "icons": [
+    { "src": "/iconos/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/iconos/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/iconos/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/iconos/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
