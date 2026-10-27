@@ -413,6 +413,27 @@
   @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
     :root { --glass: var(--card); --glass-fuerte: var(--card); }
   }
+  /* ---------- Animación al cambiar de pestaña ---------- */
+  @media (min-width: 761px) { .tabs { position: relative; } }
+  .tabs button { position: relative; z-index: 1; transition: color .25s; }
+  .tabs button[aria-selected="true"], .tabs button[aria-selected="true"]:hover { background: transparent !important; box-shadow: none !important; }
+  .tabs .indicador {
+    position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px;
+    background: var(--glass-fuerte, var(--card));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 2px 12px -2px rgba(0, 0, 0, .22);
+    -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%);
+    transition: transform .5s cubic-bezier(.32, 1.35, .5, 1), width .5s cubic-bezier(.32, 1.35, .5, 1);
+    will-change: transform, width;
+  }
+  .tabs .indicador.estira { animation: estirar .5s ease; }
+  @keyframes estirar { 35% { scale: 1.14 .86; } 70% { scale: .97 1.04; } }
+  @media (max-width: 760px) { .tabs .indicador { top: 6px; bottom: 6px; } }
+
+  #contenido.entra-der { animation: entra-der .42s cubic-bezier(.2, .8, .2, 1) both; }
+  #contenido.entra-izq { animation: entra-izq .42s cubic-bezier(.2, .8, .2, 1) both; }
+  #contenido.entra-der .card, #contenido.entra-izq .card { animation: none; }
+  @keyframes entra-der { from { opacity: 0; transform: translateX(48px); } }
+  @keyframes entra-izq { from { opacity: 0; transform: translateX(-48px); } }
 </style>
 </head>
 <body>
@@ -454,12 +475,14 @@
 </div>
 
 <main class="wrap">
+ <div id="contenido">
   <div class="cabecera-vista">
     <div><h2 id="titulo-vista"></h2><p id="intro"></p></div>
     <span class="orden" id="contador"></span>
   </div>
   <div id="marcas" class="marcas"></div>
   <div id="lista" class="grid"></div>
+ </div>
 </main>
 <dialog id="detalle" aria-labelledby="det-titulo">
   <div class="det-cab">
@@ -752,6 +775,7 @@ async function cargar() {
     $("n-resumen").textContent = (datos.num_activos ?? datos.resumen.length) || "";
     $("n-top").textContent = datos.top.length || "";
     $("n-modelos").textContent = datos.modelos.length || "";
+    moverIndicador(false);
     $("pmin").textContent = datos.precio_minimo;
     rellenarTallas();
     pintar();
@@ -761,13 +785,56 @@ async function cargar() {
   }
 }
 
-document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
-  vista = b.dataset.vista;
+const ORDEN_VISTAS = ["resumen", "top", "modelos"];
+const indicador = el("span", { class: "indicador", "aria-hidden": "true" });
+document.querySelector(".tabs").prepend(indicador);
+
+function moverIndicador(animar = true) {
+  const b = document.querySelector('.tabs button[aria-selected="true"]');
+  if (!b) return;
+  if (!animar) indicador.style.transition = "none";
+  indicador.style.width = `${b.offsetWidth}px`;
+  indicador.style.transform = `translateX(${b.offsetLeft}px)`;
+  if (animar) {
+    indicador.classList.remove("estira"); void indicador.offsetWidth; indicador.classList.add("estira");
+  } else {
+    void indicador.offsetWidth; indicador.style.transition = "";
+  }
+}
+
+function cambiarVista(nueva) {
+  if (nueva === vista || !VISTAS[nueva]) return;
+  const dir = ORDEN_VISTAS.indexOf(nueva) > ORDEN_VISTAS.indexOf(vista) ? "der" : "izq";
+  vista = nueva;
   marcaActiva = "";
-  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x.dataset.vista === nueva)));
+  moverIndicador();
+  const cont = $("contenido");
+  cont.classList.remove("entra-der", "entra-izq"); void cont.offsetWidth; cont.classList.add(`entra-${dir}`);
   pintar();
-  window.scrollTo({ top: document.querySelector(".hero").offsetHeight, behavior: "smooth" });
-}));
+  const tope = document.querySelector(".hero").offsetHeight;
+  if (window.scrollY > tope) window.scrollTo({ top: tope, behavior: "smooth" });
+}
+
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => cambiarVista(b.dataset.vista)));
+window.addEventListener("resize", () => moverIndicador(false));
+moverIndicador(false);
+if (document.fonts) document.fonts.ready.then(() => moverIndicador(false));
+
+// Deslizar con el dedo sobre la lista para cambiar de pestaña.
+let toque = null;
+$("contenido").addEventListener("touchstart", (e) => {
+  if (e.touches.length !== 1 || e.target.closest(".marcas")) { toque = null; return; }
+  toque = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+$("contenido").addEventListener("touchend", (e) => {
+  if (!toque || $("detalle").open) return;
+  const dx = e.changedTouches[0].clientX - toque.x, dy = e.changedTouches[0].clientY - toque.y;
+  toque = null;
+  if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+  const i = ORDEN_VISTAS.indexOf(vista) + (dx < 0 ? 1 : -1);
+  if (i >= 0 && i < ORDEN_VISTAS.length) cambiarVista(ORDEN_VISTAS[i]);
+}, { passive: true });
 ["f-texto", "f-min", "f-max", "f-talla"].forEach(id => $(id).addEventListener("input", pintar));
 $("det-cerrar").addEventListener("click", () => $("detalle").close());
 $("detalle").addEventListener("click", (e) => { if (e.target === $("detalle")) $("detalle").close(); });
