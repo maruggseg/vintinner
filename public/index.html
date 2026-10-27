@@ -314,6 +314,105 @@
     .modelo .foto { width: 108px; }
     .cabecera-vista h2 { font-size: 21px; }
   }
+  /* =========================================================
+     LIQUID GLASS
+     Superficies translúcidas con desenfoque y saturación del
+     fondo, borde de luz arriba y brillo diagonal, sobre un
+     fondo de color difuminado para que el cristal "refracte".
+     ========================================================= */
+  :root {
+    --glass: rgba(255, 255, 255, .52);
+    --glass-fuerte: rgba(255, 255, 255, .68);
+    --glass-borde: rgba(255, 255, 255, .75);
+    --glass-sombra: 0 10px 34px -12px rgba(60, 30, 20, .28);
+    --glass-luz: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(255, 255, 255, .25);
+    --glass-blur: blur(22px) saturate(185%);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --glass: rgba(28, 31, 42, .42);
+      --glass-fuerte: rgba(28, 31, 42, .62);
+      --glass-borde: rgba(255, 255, 255, .14);
+      --glass-sombra: 0 14px 40px -14px rgba(0, 0, 0, .8);
+      --glass-luz: inset 0 1px 0 rgba(255, 255, 255, .16), inset 0 -1px 0 rgba(255, 255, 255, .04);
+    }
+  }
+  body { background: var(--bg); }
+  body::before {
+    content: ""; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(38% 30% at 12% 18%, rgba(255, 90, 60, .38), transparent 70%),
+      radial-gradient(34% 28% at 88% 12%, rgba(255, 170, 60, .34), transparent 70%),
+      radial-gradient(40% 32% at 78% 72%, rgba(170, 90, 255, .26), transparent 70%),
+      radial-gradient(36% 30% at 18% 82%, rgba(40, 190, 200, .22), transparent 70%);
+    filter: blur(30px);
+    animation: flotar 26s ease-in-out infinite alternate;
+  }
+  @keyframes flotar { to { transform: translate3d(3%, -2%, 0) rotate(4deg) scale(1.05); } }
+
+  .cristal, .hero, .barra, .tabs, .campo, .stat, .marca-chip, .card, .puesto, .ritmo,
+  dialog#detalle, .det-resumen .pill, .det-orden button, .badge {
+    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  }
+  .hero { background: transparent; border-bottom: 0; }
+  .barra { background: var(--glass); border-bottom: 1px solid var(--glass-borde); box-shadow: var(--glass-luz); }
+  .stat, .campo, .marca-chip {
+    background: var(--glass); border: 1px solid var(--glass-borde);
+    box-shadow: var(--glass-luz), 0 4px 18px -10px rgba(0, 0, 0, .25);
+  }
+  .tabs { background: var(--glass); border: 1px solid var(--glass-borde); box-shadow: var(--glass-luz), var(--glass-sombra); }
+  .tabs button[aria-selected="true"] {
+    background: var(--glass-fuerte); color: var(--text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 2px 10px -2px rgba(0, 0, 0, .18);
+  }
+  .marca-chip.activa { background: var(--text); }
+
+  .card {
+    background: var(--glass); border: 1px solid var(--glass-borde);
+    box-shadow: var(--glass-luz), var(--glass-sombra);
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .28) 0%, rgba(255, 255, 255, 0) 38%);
+    mix-blend-mode: soft-light;
+  }
+  .puesto, .ritmo {
+    background: rgba(20, 16, 24, .28); border: 1px solid rgba(255, 255, 255, .45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6); text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
+  }
+  .puesto.oro, .ritmo.caliente { background: linear-gradient(135deg, rgba(255, 90, 60, .85), rgba(255, 154, 60, .85)); }
+  .badge { border: 1px solid var(--glass-borde); }
+
+  dialog#detalle {
+    background: var(--glass-fuerte); border: 1px solid var(--glass-borde);
+    box-shadow: var(--glass-luz), 0 40px 90px -20px rgba(0, 0, 0, .6);
+  }
+  dialog#detalle::backdrop { background: rgba(10, 8, 12, .35); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .det-cab { border-bottom-color: var(--glass-borde); }
+  .det-resumen .pill, .det-orden button { background: var(--glass); border: 1px solid var(--glass-borde); }
+  .det-orden button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+  .anuncio:hover { background: var(--glass); }
+  .anuncio + .anuncio { border-top-color: var(--glass-borde); }
+
+  .marca-app { flex-wrap: wrap; }
+
+  /* Móvil: pestañas como barra flotante de cristal abajo (estilo app). */
+  @media (max-width: 760px) {
+    .barra { position: static; background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .vivo { order: 3; margin-top: 4px; }
+    .tabs {
+      position: fixed; z-index: 20; left: 14px; right: 14px; width: auto;
+      bottom: calc(14px + env(safe-area-inset-bottom)); padding: 6px;
+      background: var(--glass-fuerte);
+      box-shadow: var(--glass-luz), 0 18px 40px -12px rgba(0, 0, 0, .45);
+    }
+    .tabs button { padding: 11px 6px; font-size: 14px; }
+    main { padding-bottom: 110px; }
+    footer { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  }
+  @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    :root { --glass: var(--card); --glass-fuerte: var(--card); }
+  }
 </style>
 </head>
 <body>
