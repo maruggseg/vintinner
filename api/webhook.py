@@ -311,6 +311,7 @@ def calcular_modelos(filas, tasas, dias=EDAD_MAXIMA_DIAS, min_anuncios=3):
         if f["fecha_escaneo"] >= limite:
             por_item[f["item_id"]].append(f)
 
+    ultimo_escaneo = max((f["fecha_escaneo"] for f in filas), default=None)
     resumen_items = []
     for item_id, apariciones in por_item.items():
         apariciones.sort(key=lambda x: x["fecha_escaneo"])
@@ -338,6 +339,10 @@ def calcular_modelos(filas, tasas, dias=EDAD_MAXIMA_DIAS, min_anuncios=3):
             "talla": (ultima.get("talla") or "").strip(),
             "titulo": ultima.get("titulo", ""), "url": ultima.get("url", ""),
             "foto_url": ultima.get("foto_url", ""),
+            "favoritos_inicio": fav_inicio, "horas": round(horas, 1),
+            "num_apariciones": len(apariciones),
+            "visto_por_primera_vez": primera["fecha_escaneo"].isoformat(),
+            "activo": ultima["fecha_escaneo"] == ultimo_escaneo,
         })
 
     grupos = defaultdict(list)
@@ -363,6 +368,14 @@ def calcular_modelos(filas, tasas, dias=EDAD_MAXIMA_DIAS, min_anuncios=3):
             "tallas_top": _tallas_top(items),
             "ejemplo_titulo": ejemplo["titulo"], "ejemplo_url": ejemplo["url"],
             "ejemplo_foto_url": ejemplo["foto_url"],
+            # Para la web: todos los anuncios del modelo, los que más gustan primero.
+            "anuncios": [
+                {k: i[k] for k in (
+                    "titulo", "url", "foto_url", "talla", "favoritos", "favoritos_inicio",
+                    "horas", "num_apariciones", "visto_por_primera_vez", "activo",
+                )} | {"precio_eur": round(i["precio_eur"], 2), "velocidad": round(i["velocidad"], 2)}
+                for i in sorted(items, key=lambda i: (i["favoritos"], i["velocidad"]), reverse=True)
+            ],
         })
 
     # La competencia se mide en relación al resto de modelos en tendencia:

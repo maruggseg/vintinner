@@ -214,6 +214,63 @@
   .tallas span { font-size: 12px; font-weight: 600; border-radius: 8px; padding: 3px 8px; background: var(--bg-2); color: var(--text); }
   .tallas span:first-child { background: var(--accent-soft); color: var(--accent); }
 
+  button.card { font: inherit; text-align: left; padding: 0; cursor: pointer; width: 100%; }
+  button.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+  button.card:hover .foto img { transform: scale(1.04); }
+  button.card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .ver-mas { margin-top: 2px; font-size: 13px; font-weight: 700; color: var(--accent); }
+
+  /* Panel de detalle de un modelo */
+  dialog#detalle {
+    border: 0; padding: 0; background: var(--card); color: var(--text);
+    width: min(860px, calc(100% - 32px)); max-height: min(88vh, 900px);
+    border-radius: 22px; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .55);
+  }
+  dialog#detalle[open] { display: flex; flex-direction: column; animation: subir .25s ease both; }
+  dialog#detalle::backdrop { background: rgba(10, 8, 12, .55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  @keyframes subir { from { opacity: 0; transform: translateY(16px) scale(.98); } }
+  .det-cab { padding: 20px 22px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+  .det-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .det-top h3 { margin: 0; font-family: "Bricolage Grotesque", Inter, sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; text-transform: capitalize; }
+  .det-top h3 small { display: block; font-family: Inter, sans-serif; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .cerrar { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font-size: 20px; line-height: 1; cursor: pointer; }
+  .cerrar:hover { border-color: var(--accent); }
+  .det-resumen { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .det-resumen .pill { font-size: 13px; font-weight: 600; background: var(--bg-2); border-radius: 999px; padding: 5px 11px; }
+  .det-resumen .pill b { font-weight: 800; }
+  .det-orden { display: flex; gap: 6px; flex-wrap: wrap; }
+  .det-orden button { font: inherit; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  .det-orden button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .det-lista { overflow-y: auto; padding: 8px 12px 16px; overscroll-behavior: contain; }
+  .anuncio {
+    display: grid; grid-template-columns: 76px 1fr auto; gap: 14px; align-items: center;
+    padding: 10px; border-radius: 14px; color: inherit; text-decoration: none; transition: background .15s;
+  }
+  .anuncio:hover { background: var(--bg-2); }
+  .anuncio + .anuncio { border-top: 1px solid var(--line); }
+  .anuncio .mini { width: 76px; height: 92px; border-radius: 10px; overflow: hidden; background: var(--bg-2); }
+  .anuncio .mini img { width: 100%; height: 100%; object-fit: cover; display: block; color: transparent; }
+  .anuncio .info { min-width: 0; display: grid; gap: 4px; }
+  .anuncio .t { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .anuncio .datos { display: flex; gap: 6px 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+  .anuncio .datos b { color: var(--text); font-weight: 700; }
+  .anuncio .datos .subida { color: var(--green); }
+  .anuncio .der { text-align: right; display: grid; gap: 4px; justify-items: end; }
+  .anuncio .p { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+  .anuncio .ir { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .estado-anuncio { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--green-bg); color: var(--green); }
+  .estado-anuncio.fuera { background: var(--bg-2); color: var(--muted); }
+  @media (max-width: 760px) {
+    dialog#detalle { width: 100%; max-width: 100%; max-height: 92vh; margin: auto 0 0; border-radius: 22px 22px 0 0; }
+    @keyframes subir { from { transform: translateY(40px); opacity: 0; } }
+    .det-cab { padding: 16px 16px 12px; }
+    .det-top h3 { font-size: 21px; }
+    .anuncio { grid-template-columns: 64px 1fr; gap: 12px; }
+    .anuncio .mini { width: 64px; height: 78px; }
+    .anuncio .der { grid-column: 2; grid-row: 2; display: flex; justify-content: space-between; align-items: center; text-align: left; }
+    .anuncio .p { font-size: 16px; }
+  }
+
   /* Estados */
   .esqueleto { pointer-events: none; }
   .esqueleto .foto, .esqueleto .linea {
@@ -297,6 +354,22 @@
   <div id="marcas" class="marcas"></div>
   <div id="lista" class="grid"></div>
 </main>
+<dialog id="detalle" aria-labelledby="det-titulo">
+  <div class="det-cab">
+    <div class="det-top">
+      <h3 id="det-titulo"></h3>
+      <button class="cerrar" type="button" aria-label="Cerrar" id="det-cerrar">×</button>
+    </div>
+    <div class="det-resumen" id="det-resumen"></div>
+    <div class="det-orden" role="group" aria-label="Ordenar anuncios">
+      <button type="button" data-orden="favs" aria-pressed="true">Más favoritos</button>
+      <button type="button" data-orden="ritmo" aria-pressed="false">Suben más rápido</button>
+      <button type="button" data-orden="barato" aria-pressed="false">Más baratos</button>
+      <button type="button" data-orden="nuevo" aria-pressed="false">Más nuevos</button>
+    </div>
+  </div>
+  <div class="det-lista" id="det-lista"></div>
+</dialog>
 <footer>Datos de Vinted España · se actualizan cada 10 minutos · solo anuncios desde <span id="pmin">70</span> €</footer>
 
 <script>
@@ -415,7 +488,7 @@ function pintarModelos(lista) {
   return lista
     .filter(t => pasaFiltros(`${t.marca} ${t.modelo}`, t.precio_mediana, undefined, t.marca))
     .filter(t => !talla || t.tallas_top.some(([tt]) => tt === talla))
-    .map((t, i) => enlace(t.ejemplo_url, "card modelo",
+    .map((t, i) => botonModelo(t,
       foto(t.ejemplo_foto_url, t.ejemplo_titulo, el("span", { class: "puesto" + (i < 3 ? " oro" : "") }, `#${i + 1}`)),
       el("div", { class: "cuerpo" },
         el("h3", {}, el("small", {}, t.marca), t.modelo),
@@ -431,8 +504,82 @@ function pintarModelos(lista) {
           el("span", {}, el("b", {}, t.velocidad_media), "favs/h"),
         ),
         t.tallas_top.length ? el("div", { class: "tallas" }, ...t.tallas_top.map(([tt, f]) => el("span", {}, `T. ${tt} · ${f}♥`))) : null,
+        el("div", { class: "ver-mas" }, `Ver sus ${t.anuncios ? t.anuncios.length : t.num_anuncios} anuncios →`),
       ),
     ));
+}
+
+function botonModelo(t, ...hijos) {
+  const b = el("button", { class: "card modelo", type: "button", "aria-haspopup": "dialog" }, ...hijos);
+  b.addEventListener("click", () => abrirModelo(t));
+  return b;
+}
+
+function haceCuanto(iso) {
+  if (!iso) return "";
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso + "Z")) / 60000));
+  if (min < 60) return `hace ${Math.max(min, 1)} min`;
+  const h = Math.round(min / 60);
+  if (h < 48) return `hace ${h} h`;
+  return `hace ${Math.round(h / 24)} días`;
+}
+
+let modeloAbierto = null;
+let ordenDetalle = "favs";
+const ORDENES = {
+  favs: (a, b) => b.favoritos - a.favoritos || b.velocidad - a.velocidad,
+  ritmo: (a, b) => b.velocidad - a.velocidad || b.favoritos - a.favoritos,
+  barato: (a, b) => a.precio_eur - b.precio_eur,
+  nuevo: (a, b) => (b.visto_por_primera_vez || "").localeCompare(a.visto_por_primera_vez || ""),
+};
+
+function filaAnuncio(a) {
+  const ganados = a.favoritos - (a.favoritos_inicio || 0);
+  const mini = el("div", { class: "mini" }, seguro(a.foto_url) ? el("img", { src: seguro(a.foto_url), alt: "", loading: "lazy", referrerpolicy: "no-referrer" }) : null);
+  return enlace(a.url, "anuncio",
+    mini,
+    el("div", { class: "info" },
+      el("div", { class: "t" }, a.titulo || "Sin título"),
+      el("div", { class: "datos" },
+        el("span", {}, "♥ ", el("b", {}, num(a.favoritos)), " favs"),
+        a.num_apariciones >= 2 && ganados > 0 ? el("span", { class: "subida" }, `+${ganados} en ${a.horas} h`) : null,
+        a.num_apariciones >= 2 ? el("span", {}, el("b", {}, a.velocidad), " favs/h") : el("span", {}, "recién detectado"),
+        a.talla ? el("span", {}, "Talla ", el("b", {}, a.talla)) : null,
+        el("span", {}, `Visto por 1ª vez ${haceCuanto(a.visto_por_primera_vez)}`),
+      ),
+    ),
+    el("div", { class: "der" },
+      el("span", { class: "p" }, euros(a.precio_eur)),
+      el("span", { class: "estado-anuncio" + (a.activo ? "" : " fuera"),
+        title: a.activo ? "Aparece en el último escaneo" : "No ha salido en el último escaneo: puede estar vendido, reservado o simplemente más abajo en Vinted" },
+        a.activo ? "Activo" : "No visto ahora"),
+      el("span", { class: "ir" }, "Ver en Vinted ↗"),
+    ),
+  );
+}
+
+function pintarDetalle() {
+  const t = modeloAbierto;
+  if (!t) return;
+  const lista = [...(t.anuncios || [])].sort(ORDENES[ordenDetalle]);
+  $("det-lista").replaceChildren(...lista.map(filaAnuncio));
+  document.querySelectorAll(".det-orden button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.orden === ordenDetalle)));
+}
+
+function abrirModelo(t) {
+  modeloAbierto = t;
+  ordenDetalle = "favs";
+  $("det-titulo").replaceChildren(el("small", {}, t.marca), t.modelo);
+  const activos = (t.anuncios || []).filter(a => a.activo).length;
+  $("det-resumen").replaceChildren(
+    el("span", { class: "pill" }, "Precio habitual ", el("b", {}, euros(t.precio_mediana))),
+    el("span", { class: "pill" }, `Normal ${euros(t.precio_p25)} – ${euros(t.precio_p75)}`),
+    el("span", { class: "pill" }, el("b", {}, num(activos)), ` activos de ${num((t.anuncios || []).length)}`),
+    t.competencia_nivel ? el("span", { class: `badge ${t.competencia_nivel}` }, el("i"), COMPETENCIA[t.competencia_nivel]) : null,
+  );
+  pintarDetalle();
+  $("det-lista").scrollTop = 0;
+  $("detalle").showModal();
 }
 
 function pintarMarcas() {
@@ -515,6 +662,9 @@ document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click
   window.scrollTo({ top: document.querySelector(".hero").offsetHeight, behavior: "smooth" });
 }));
 ["f-texto", "f-min", "f-max", "f-talla"].forEach(id => $(id).addEventListener("input", pintar));
+$("det-cerrar").addEventListener("click", () => $("detalle").close());
+$("detalle").addEventListener("click", (e) => { if (e.target === $("detalle")) $("detalle").close(); });
+document.querySelectorAll(".det-orden button").forEach(b => b.addEventListener("click", () => { ordenDetalle = b.dataset.orden; pintarDetalle(); }));
 cargar();
 </script>
 </body>
