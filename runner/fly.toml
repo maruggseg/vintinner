@@ -37,3 +37,8 @@ primary_region = "cdg"
 [[vm]]
   size = "shared-cpu-1x"
   memory = "1024mb"
+
+# Si el runner se cierra (aunque sea "limpiamente"), Fly lo vuelve a
+# arrancar. Sin esto se quedó parado del 16 al 27 de octubre.
+[[restart]]
+  policy = "always"
