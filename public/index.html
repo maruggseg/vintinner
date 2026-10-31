@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vintinner</title>
+<meta name="description" content="Las zapatillas de mujer que más se mueven en Vinted ahora mismo">
+<meta name="theme-color" content="#0d0f14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f1ec" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/iconos/icono.svg" type="image/svg+xml">
+<link rel="icon" href="/iconos/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/iconos/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/iconos/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vintinner">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ec;
+    --bg-2: #ebe6de;
+    --card: #ffffff;
+    --text: #17151a;
+    --muted: #6d6872;
+    --line: #e4ded5;
+    --accent: #ff5a3c;
+    --accent-2: #ff9a3c;
+    --accent-ink: #ffffff;
+    --accent-soft: #ffe7e1;
+    --green: #128a4a; --green-bg: #dcf3e5;
+    --amber: #a86a00; --amber-bg: #fcefd2;
+    --red: #c4302b; --red-bg: #fbe1df;
+    --shadow: 0 1px 2px rgba(30, 20, 10, .06), 0 8px 24px -12px rgba(30, 20, 10, .18);
+    --shadow-hover: 0 2px 4px rgba(30, 20, 10, .08), 0 18px 40px -16px rgba(30, 20, 10, .32);
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0f14;
+      --bg-2: #141720;
+      --card: #171a23;
+      --text: #f1eef0;
+      --muted: #9a97a6;
+      --line: #262a36;
+      --accent-soft: #3a1e19;
+      --green: #4fd38a; --green-bg: #12301f;
+      --amber: #f2bd4d; --amber-bg: #33280f;
+      --red: #ff7b72; --red-bg: #3a1716;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -14px rgba(0, 0, 0, .7);
+      --shadow-hover: 0 2px 4px rgba(0, 0, 0, .5), 0 22px 44px -16px rgba(0, 0, 0, .9);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  /* Android/Chrome pinta un rectángulo azul al pulsar; lo quitamos y dejamos
+     el contorno de foco solo para quien navega con teclado. */
+  html { -webkit-tap-highlight-color: transparent; }
+  button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- Cabecera ---------- */
+  .hero {
+    position: relative; overflow: hidden;
+    background:
+      radial-gradient(900px 380px at 85% -10%, rgba(255, 154, 60, .35), transparent 60%),
+      radial-gradient(700px 360px at 5% 0%, rgba(255, 90, 60, .28), transparent 60%),
+      var(--bg-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .hero .wrap { padding-top: 28px; padding-bottom: 26px; }
+  .marca-app { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 42px; height: 42px; border-radius: 13px; flex: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center; box-shadow: 0 8px 20px -8px rgba(255, 90, 60, .8);
+  }
+  .logo svg { width: 22px; height: 22px; }
+  h1 {
+    font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 800;
+    font-size: 26px; letter-spacing: -.02em; margin: 0; line-height: 1;
+  }
+  .lema { margin: 18px 0 0; font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 600;
+    font-size: clamp(22px, 3.6vw, 38px); line-height: 1.1; letter-spacing: -.02em; max-width: 720px; }
+  .lema em { font-style: normal; background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+  .stat {
+    background: color-mix(in srgb, var(--card) 80%, transparent);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; min-width: 120px;
+  }
+  .stat b { display: block; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .vivo { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); margin-left: auto; }
+  .vivo i { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34, 197, 94, .6); animation: pulso 2s infinite; }
+  .vivo.viejo i { background: #f59e0b; animation: none; }
+  @keyframes pulso { 70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+
+  /* ---------- Barra fija: pestañas + filtros ---------- */
+  .barra {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .barra .wrap { display: flex; gap: 12px; align-items: center; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap; }
+  .tabs { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px; gap: 2px; }
+  .tabs button {
+    border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; font-size: 14px;
+    padding: 8px 16px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: .2s;
+  }
+  .tabs button:hover { color: var(--text); }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+  .tabs .n { font-size: 11px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+  .filtros { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; justify-content: flex-end; }
+  .campo {
+    display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 0 12px; height: 40px; transition: border-color .15s, box-shadow .15s;
+  }
+  .campo:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .campo svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+  .campo input, .campo select {
+    border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 14px; min-width: 0; height: 100%;
+  }
+  .campo.buscar { flex: 1 1 220px; max-width: 340px; }
+  .campo.buscar input { width: 100%; }
+  .campo.precio input { width: 64px; }
+  .campo.precio span { color: var(--muted); font-size: 13px; }
+  .campo select { cursor: pointer; padding-right: 2px; }
+
+  /* ---------- Contenido ---------- */
+  main { padding-top: 22px; padding-bottom: 60px; overflow-x: clip; }
+  /* El deslizamiento al cambiar de pestaña no debe ensanchar la página (en
+     móvil Chrome ensanchaba el viewport y deformaba la barra de abajo). */
+  html, body { overflow-x: clip; }
+  .cabecera-vista { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .cabecera-vista h2 { font-family: "Bricolage Grotesque", Inter, sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -.02em; margin: 0; }
+  .cabecera-vista p { margin: 4px 0 0; color: var(--muted); font-size: 14px; max-width: 640px; }
+  .orden { font-size: 13px; color: var(--muted); }
+
+  .marcas { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 14px; scrollbar-width: none; }
+  .marcas::-webkit-scrollbar { display: none; }
+  .marca-chip {
+    flex: none; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); border-radius: 999px; padding: 6px 12px 6px 6px;
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s;
+  }
+  .marca-chip:hover { border-color: var(--accent); }
+  .marca-chip.activa { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .marca-chip .ini {
+    width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+  }
+  .marca-chip small { color: inherit; opacity: .6; font-weight: 500; }
+
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .grid.modelos { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+
+  .card {
+    position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; display: flex; flex-direction: column; color: inherit; text-decoration: none;
+    box-shadow: var(--shadow); transition: transform .2s ease, box-shadow .2s ease;
+    animation: entrar .35s ease both;
+  }
+  a.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+  @keyframes entrar { from { opacity: 0; transform: translateY(8px); } }
+
+  .foto { position: relative; aspect-ratio: 4 / 5; background: var(--bg-2); overflow: hidden; }
+  .foto img { width: 100%; height: 100%; object-fit: cover; display: block; color: transparent; transition: transform .4s ease; }
+  a.card:hover .foto img { transform: scale(1.04); }
+  .foto::after { content: ""; position: absolute; inset: auto 0 0 0; height: 45%; background: linear-gradient(to top, rgba(0, 0, 0, .45), transparent); pointer-events: none; }
+  .puesto {
+    position: absolute; top: 10px; left: 10px; z-index: 1; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 10px;
+    display: grid; place-items: center; font-weight: 800; font-size: 13px; color: #fff;
+    background: rgba(15, 15, 20, .55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .puesto.oro { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .favs {
+    position: absolute; bottom: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 5px;
+    color: #fff; font-weight: 700; font-size: 13px; text-shadow: 0 1px 3px rgba(0, 0, 0, .5);
+  }
+  .favs svg { width: 15px; height: 15px; fill: #ff6b81; }
+  .ritmo {
+    position: absolute; bottom: 9px; right: 10px; z-index: 1; font-size: 12px; font-weight: 700; color: #fff;
+    background: rgba(15, 15, 20, .55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    padding: 4px 8px; border-radius: 999px;
+  }
+  .ritmo.caliente { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+
+  .cuerpo { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .fila { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .precio { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+  .talla { font-size: 12px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; white-space: nowrap; }
+  .titulo { font-size: 14px; font-weight: 500; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sub { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .pie { margin-top: auto; padding-top: 4px; font-size: 12.5px; color: var(--muted); }
+  .pie b { color: var(--text); font-weight: 700; }
+  .subida { color: var(--green); font-weight: 700; }
+
+  /* Tarjeta de modelo */
+  .modelo { flex-direction: row; }
+  .modelo .foto { width: 132px; flex: none; aspect-ratio: auto; }
+  .modelo .foto::after { display: none; }
+  .modelo .cuerpo { gap: 8px; padding: 14px 16px 16px; }
+  .modelo h3 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; text-transform: capitalize; }
+  .modelo h3 small { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+  .rango { margin-top: 2px; }
+  .rango .barra-precio { position: relative; height: 6px; border-radius: 999px; background: var(--bg-2); margin: 8px 0 4px; }
+  .rango .tramo { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); opacity: .9; }
+  .rango .marcador { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--card); border: 3px solid var(--accent); transform: translate(-50%, -50%); }
+  .rango .etiquetas { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+  .badge { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+  .badge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .badge.baja { background: var(--green-bg); color: var(--green); }
+  .badge.media { background: var(--amber-bg); color: var(--amber); }
+  .badge.alta, .badge.saturado { background: var(--red-bg); color: var(--red); }
+  .metricas { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+  .metricas b { display: block; font-size: 15px; color: var(--text); font-weight: 700; }
+  .tallas { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tallas span { font-size: 12px; font-weight: 600; border-radius: 8px; padding: 3px 8px; background: var(--bg-2); color: var(--text); }
+  .tallas span:first-child { background: var(--accent-soft); color: var(--accent); }
+
+  button.card { font: inherit; text-align: left; padding: 0; cursor: pointer; width: 100%; }
+  button.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+  button.card:hover .foto img { transform: scale(1.04); }
+  button.card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .ver-mas { margin-top: 2px; font-size: 13px; font-weight: 700; color: var(--accent); }
+
+  /* Panel de detalle de un modelo */
+  dialog#detalle {
+    border: 0; padding: 0; background: var(--card); color: var(--text);
+    width: min(860px, calc(100% - 32px)); max-height: min(88vh, 900px);
+    border-radius: 22px; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .55);
+  }
+  dialog#detalle[open] { display: flex; flex-direction: column; animation: subir .25s ease both; }
+  dialog#detalle::backdrop { background: rgba(10, 8, 12, .55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  @keyframes subir { from { opacity: 0; transform: translateY(16px) scale(.98); } }
+  .det-cab { padding: 20px 22px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+  .det-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .det-top h3 { margin: 0; font-family: "Bricolage Grotesque", Inter, sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; text-transform: capitalize; }
+  .det-top h3 small { display: block; font-family: Inter, sans-serif; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .cerrar { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font-size: 20px; line-height: 1; cursor: pointer; }
+  .cerrar:hover { border-color: var(--accent); }
+  .det-resumen { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .det-resumen .pill { font-size: 13px; font-weight: 600; background: var(--bg-2); border-radius: 999px; padding: 5px 11px; }
+  .det-resumen .pill b { font-weight: 800; }
+  .det-orden { display: flex; gap: 6px; flex-wrap: wrap; }
+  .det-orden button { font: inherit; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  .det-orden button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .det-lista { overflow-y: auto; padding: 8px 12px 16px; overscroll-behavior: contain; }
+  .anuncio {
+    display: grid; grid-template-columns: 76px 1fr auto; gap: 14px; align-items: center;
+    padding: 10px; border-radius: 14px; color: inherit; text-decoration: none; transition: background .15s;
+  }
+  .anuncio:hover { background: var(--bg-2); }
+  .anuncio + .anuncio { border-top: 1px solid var(--line); }
+  .anuncio .mini { width: 76px; height: 92px; border-radius: 10px; overflow: hidden; background: var(--bg-2); }
+  .anuncio .mini img { width: 100%; height: 100%; object-fit: cover; display: block; color: transparent; }
+  .anuncio .info { min-width: 0; display: grid; gap: 4px; }
+  .anuncio .t { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .anuncio .datos { display: flex; gap: 6px 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+  .anuncio .datos b { color: var(--text); font-weight: 700; }
+  .anuncio .datos .subida { color: var(--green); }
+  .anuncio .der { text-align: right; display: grid; gap: 4px; justify-items: end; }
+  .anuncio .p { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+  .anuncio .ir { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .estado-anuncio { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--green-bg); color: var(--green); }
+  .estado-anuncio.fuera { background: var(--bg-2); color: var(--muted); }
+  @media (max-width: 760px) {
+    dialog#detalle { width: 100%; max-width: 100%; max-height: 92vh; margin: auto 0 0; border-radius: 22px 22px 0 0; }
+    @keyframes subir { from { transform: translateY(40px); opacity: 0; } }
+    .det-cab { padding: 16px 16px 12px; }
+    .det-top h3 { font-size: 21px; }
+    .anuncio { grid-template-columns: 64px 1fr; gap: 12px; }
+    .anuncio .mini { width: 64px; height: 78px; }
+    .anuncio .der { grid-column: 2; grid-row: 2; display: flex; justify-content: space-between; align-items: center; text-align: left; }
+    .anuncio .p { font-size: 16px; }
+  }
+
+  /* Estados */
+  .esqueleto { pointer-events: none; }
+  .esqueleto .foto, .esqueleto .linea {
+    background: linear-gradient(90deg, var(--bg-2) 0%, var(--line) 50%, var(--bg-2) 100%); background-size: 200% 100%;
+    animation: brillo 1.3s infinite linear;
+  }
+  .esqueleto .linea { height: 12px; border-radius: 6px; }
+  @keyframes brillo { to { background-position: -200% 0; } }
+  .vacio { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--muted); }
+  .vacio .icono { font-size: 40px; margin-bottom: 8px; }
+  .vacio b { display: block; color: var(--text); font-size: 17px; margin-bottom: 4px; }
+  footer { text-align: center; font-size: 12px; color: var(--muted); padding: 0 20px 40px; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+  @media (max-width: 760px) {
+    .wrap { padding: 0 14px; }
+    .hero .wrap { padding-top: 20px; padding-bottom: 20px; }
+    .vivo { margin-left: 0; width: 100%; }
+    .stat { min-width: 0; flex: 1 1 calc(33% - 10px); padding: 8px 10px; }
+    .stat b { font-size: 17px; }
+    .barra .wrap { gap: 10px; }
+    .tabs { width: 100%; }
+    .tabs button { flex: 1; padding: 8px 6px; }
+    .filtros { justify-content: stretch; }
+    .campo.buscar { max-width: none; flex-basis: 100%; }
+    .campo.precio, .campo.talla { flex: 1; }
+    .campo.precio input { width: 100%; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .grid.modelos { grid-template-columns: 1fr; }
+    .cuerpo { padding: 10px 11px 12px; }
+    .precio { font-size: 17px; }
+    .modelo .foto { width: 108px; }
+    .cabecera-vista h2 { font-size: 21px; }
+  }
+  /* =========================================================
+     LIQUID GLASS
+     Superficies translúcidas con desenfoque y saturación del
+     fondo, borde de luz arriba y brillo diagonal, sobre un
+     fondo de color difuminado para que el cristal "refracte".
+     ========================================================= */
+  :root {
+    --glass: rgba(255, 255, 255, .52);
+    --glass-fuerte: rgba(255, 255, 255, .68);
+    --glass-borde: rgba(255, 255, 255, .75);
+    --glass-sombra: 0 10px 34px -12px rgba(60, 30, 20, .28);
+    --glass-luz: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(255, 255, 255, .25);
+    --glass-blur: blur(22px) saturate(185%);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --glass: rgba(28, 31, 42, .42);
+      --glass-fuerte: rgba(28, 31, 42, .62);
+      --glass-borde: rgba(255, 255, 255, .14);
+      --glass-sombra: 0 14px 40px -14px rgba(0, 0, 0, .8);
+      --glass-luz: inset 0 1px 0 rgba(255, 255, 255, .16), inset 0 -1px 0 rgba(255, 255, 255, .04);
+    }
+  }
+  body { background: var(--bg); }
+  body::before {
+    content: ""; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(38% 30% at 12% 18%, rgba(255, 90, 60, .38), transparent 70%),
+      radial-gradient(34% 28% at 88% 12%, rgba(255, 170, 60, .34), transparent 70%),
+      radial-gradient(40% 32% at 78% 72%, rgba(170, 90, 255, .26), transparent 70%),
+      radial-gradient(36% 30% at 18% 82%, rgba(40, 190, 200, .22), transparent 70%);
+    filter: blur(30px);
+    animation: flotar 26s ease-in-out infinite alternate;
+  }
+  @keyframes flotar { to { transform: translate3d(3%, -2%, 0) rotate(4deg) scale(1.05); } }
+
+  .cristal, .hero, .barra, .tabs, .campo, .stat, .marca-chip, .card, .puesto, .ritmo,
+  dialog#detalle, .det-resumen .pill, .det-orden button, .badge {
+    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  }
+  .hero { background: transparent; border-bottom: 0; }
+  .barra { background: var(--glass); border-bottom: 1px solid var(--glass-borde); box-shadow: var(--glass-luz); }
+  .stat, .campo, .marca-chip {
+    background: var(--glass); border: 1px solid var(--glass-borde);
+    box-shadow: var(--glass-luz), 0 4px 18px -10px rgba(0, 0, 0, .25);
+  }
+  .tabs { background: var(--glass); border: 1px solid var(--glass-borde); box-shadow: var(--glass-luz), var(--glass-sombra); }
+  .tabs button[aria-selected="true"] {
+    background: var(--glass-fuerte); color: var(--text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 2px 10px -2px rgba(0, 0, 0, .18);
+  }
+  .marca-chip.activa { background: var(--text); }
+
+  .card {
+    background: var(--glass); border: 1px solid var(--glass-borde);
+    box-shadow: var(--glass-luz), var(--glass-sombra);
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .28) 0%, rgba(255, 255, 255, 0) 38%);
+    mix-blend-mode: soft-light;
+  }
+  .puesto, .ritmo {
+    background: rgba(20, 16, 24, .28); border: 1px solid rgba(255, 255, 255, .45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6); text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
+  }
+  .puesto.oro, .ritmo.caliente { background: linear-gradient(135deg, rgba(255, 90, 60, .85), rgba(255, 154, 60, .85)); }
+  .badge { border: 1px solid var(--glass-borde); }
+
+  dialog#detalle {
+    background: var(--glass-fuerte); border: 1px solid var(--glass-borde);
+    box-shadow: var(--glass-luz), 0 40px 90px -20px rgba(0, 0, 0, .6);
+  }
+  dialog#detalle::backdrop { background: rgba(10, 8, 12, .35); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .det-cab { border-bottom-color: var(--glass-borde); }
+  .det-resumen .pill, .det-orden button { background: var(--glass); border: 1px solid var(--glass-borde); }
+  .det-orden button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+  .anuncio:hover { background: var(--glass); }
+  .anuncio + .anuncio { border-top-color: var(--glass-borde); }
+
+  .marca-app { flex-wrap: wrap; }
+
+  /* Móvil: pestañas como barra flotante de cristal abajo (estilo app). */
+  @media (max-width: 760px) {
+    .barra { position: static; background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .vivo { order: 3; margin-top: 4px; }
+    .tabs {
+      position: fixed; z-index: 20; left: 14px; right: 14px; width: auto;
+      bottom: calc(14px + env(safe-area-inset-bottom)); padding: 6px;
+      background: var(--glass-fuerte);
+      box-shadow: var(--glass-luz), 0 18px 40px -12px rgba(0, 0, 0, .45);
+    }
+    .tabs button { padding: 11px 6px; font-size: 14px; }
+    main { padding-bottom: 110px; }
+    footer { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  }
+  @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    :root { --glass: var(--card); --glass-fuerte: var(--card); }
+  }
+  /* ---------- Animación al cambiar de pestaña ---------- */
+  @media (min-width: 761px) { .tabs { position: relative; } }
+  .tabs button { position: relative; z-index: 1; transition: color .25s; }
+  .tabs button[aria-selected="true"], .tabs button[aria-selected="true"]:hover { background: transparent !important; box-shadow: none !important; }
+  /* Sin backdrop-filter propio: un desenfoque dentro de otro desenfoque
+     (la barra) se pinta mal en Chrome de Android. Y sin "rebote" que
+     sobrepase la posición: en móvil se veía salirse de la barra. */
+  .tabs { overflow: hidden; isolation: isolate; }
+  .tabs .indicador {
+    position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px;
+    background: rgba(255, 255, 255, .9);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1), 0 2px 10px -2px rgba(0, 0, 0, .2);
+    transition: transform .42s cubic-bezier(.22, 1, .36, 1), width .42s cubic-bezier(.22, 1, .36, 1);
+    will-change: transform;
+  }
+  @media (prefers-color-scheme: dark) {
+    .tabs .indicador { background: rgba(72, 76, 94, .78); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 2px 10px -2px rgba(0, 0, 0, .5); }
+  }
+  .tabs .indicador.estira { animation: estirar .42s ease; }
+  @keyframes estirar { 40% { scale: 1.04 .92; } }
+  @media (max-width: 760px) { .tabs .indicador { top: 6px; bottom: 6px; } }
+
+  #contenido.entra-der { animation: entra-der .42s cubic-bezier(.2, .8, .2, 1) both; }
+  #contenido.entra-izq { animation: entra-izq .42s cubic-bezier(.2, .8, .2, 1) both; }
+  #contenido.entra-der .card, #contenido.entra-izq .card { animation: none; }
+  @keyframes entra-der { from { opacity: 0; transform: translateX(48px); } }
+  @keyframes entra-izq { from { opacity: 0; transform: translateX(-48px); } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="marca-app">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7l7 11 7-11"/></svg>
+      </div>
+      <h1>Vintinner</h1>
+      <span class="vivo" id="vivo"><i></i><span id="estado">Cargando…</span></span>
+    </div>
+    <p class="lema">Las zapatillas que <em>se están vendiendo ya</em> en Vinted, antes que nadie.</p>
+    <div class="stats">
+      <div class="stat"><b id="s-activos">—</b><span>anuncios activos</span></div>
+      <div class="stat"><b id="s-modelos">—</b><span>modelos en tendencia</span></div>
+      <div class="stat"><b id="s-escaneos">—</b><span>escaneos analizados</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="barra">
+  <div class="wrap">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-vista="resumen" aria-selected="true">Ahora<span class="n" id="n-resumen"></span></button>
+      <button role="tab" data-vista="top" aria-selected="false">Más subida<span class="n" id="n-top"></span></button>
+      <button role="tab" data-vista="modelos" aria-selected="false">Modelos<span class="n" id="n-modelos"></span></button>
+    </div>
+    <div class="filtros">
+      <label class="campo buscar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="f-texto" placeholder="Buscar marca o modelo" aria-label="Buscar marca o modelo">
+      </label>
+      <label class="campo precio"><span>€</span><input type="number" id="f-min" placeholder="Mín" min="0" inputmode="numeric" aria-label="Precio mínimo"></label>
+      <label class="campo precio"><span>€</span><input type="number" id="f-max" placeholder="Máx" min="0" inputmode="numeric" aria-label="Precio máximo"></label>
+      <label class="campo talla"><select id="f-talla" aria-label="Talla"><option value="">Todas las tallas</option></select></label>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+ <div id="contenido">
+  <div class="cabecera-vista">
+    <div><h2 id="titulo-vista"></h2><p id="intro"></p></div>
+    <span class="orden" id="contador"></span>
+  </div>
+  <div id="marcas" class="marcas"></div>
+  <div id="lista" class="grid"></div>
+ </div>
+</main>
+<dialog id="detalle" aria-labelledby="det-titulo">
+  <div class="det-cab">
+    <div class="det-top">
+      <h3 id="det-titulo"></h3>
+      <button class="cerrar" type="button" aria-label="Cerrar" id="det-cerrar">×</button>
+    </div>
+    <div class="det-resumen" id="det-resumen"></div>
+    <div class="det-orden" role="group" aria-label="Ordenar anuncios">
+      <button type="button" data-orden="favs" aria-pressed="true">Más favoritos</button>
+      <button type="button" data-orden="ritmo" aria-pressed="false">Suben más rápido</button>
+      <button type="button" data-orden="barato" aria-pressed="false">Más baratos</button>
+      <button type="button" data-orden="nuevo" aria-pressed="false">Más nuevos</button>
+    </div>
+  </div>
+  <div class="det-lista" id="det-lista"></div>
+</dialog>
+<footer>Datos de Vinted España · se actualizan cada 10 minutos · solo anuncios desde <span id="pmin">70</span> €</footer>
+
+<script>
+const VISTAS = {
+  resumen: { titulo: "Lo que se mueve ahora", intro: "Anuncios activos ordenados por lo rápido que están ganando favoritos en este momento." },
+  top: { titulo: "Más subida de favoritos", intro: "Los anuncios que más favoritos han ganado en los últimos días." },
+  modelos: { titulo: "Modelos ganadores", intro: "Marca + modelo que se repite con interés entre varios vendedores: a cuánto venderlo, cuánta competencia hay y qué tallas piden." },
+};
+const COMPETENCIA = {
+  baja: "Poca competencia · buena demanda",
+  media: "Competencia media",
+  alta: "Mucha competencia · se mueve bien",
+  saturado: "Saturado",
+};
+let datos = null;
+let vista = "resumen";
+let marcaActiva = "";
+
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs = {}, ...hijos) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v;
+    else if (k === "style") n.style.cssText = v;
+    else n.setAttribute(k, v);
+  }
+  for (const h of hijos) if (h != null && h !== false) n.append(h);
+  return n;
+}
+const SVG_NS = "http://www.w3.org/2000/svg";
+function corazon() {
+  const s = document.createElementNS(SVG_NS, "svg"); s.setAttribute("viewBox", "0 0 24 24");
+  const p = document.createElementNS(SVG_NS, "path");
+  p.setAttribute("d", "M12 21s-7.5-4.6-9.6-9.2C.9 8.3 3 4.5 6.7 4.5c2.2 0 3.6 1.2 5.3 3.1 1.7-1.9 3.1-3.1 5.3-3.1 3.7 0 5.8 3.8 4.3 7.3C19.5 16.4 12 21 12 21z");
+  s.append(p); return s;
+}
+// Los títulos y enlaces vienen de anuncios de terceros: nunca se insertan como
+// HTML, y solo se aceptan URLs https.
+const seguro = (u) => (typeof u === "string" && u.startsWith("https://")) ? u : null;
+const euros = (n) => `${Math.round(n)} €`;
+const num = (n) => new Intl.NumberFormat("es-ES").format(n);
+
+function foto(src, alt, ...extras) {
+  const s = seguro(src);
+  return el("div", { class: "foto" }, s ? el("img", { src: s, alt: alt || "", loading: "lazy", referrerpolicy: "no-referrer" }) : null, ...extras);
+}
+function enlace(url, clase, ...hijos) {
+  const u = seguro(url);
+  return u ? el("a", { class: clase, href: u, target: "_blank", rel: "noopener noreferrer" }, ...hijos) : el("div", { class: clase }, ...hijos);
+}
+
+function pasaFiltros(texto, precio, talla, marca) {
+  const q = $("f-texto").value.trim().toLowerCase();
+  const min = parseFloat($("f-min").value), max = parseFloat($("f-max").value);
+  const t = $("f-talla").value;
+  if (q && !texto.toLowerCase().includes(q)) return false;
+  if (!isNaN(min) && precio < min) return false;
+  if (!isNaN(max) && precio > max) return false;
+  if (t && talla !== undefined && talla !== t) return false;
+  if (marcaActiva && marca !== marcaActiva) return false;
+  return true;
+}
+
+function tarjetaAnuncio(r, i, favs, ritmoTexto, caliente, pie) {
+  return enlace(r.url, "card",
+    foto(r.foto_url, r.titulo,
+      el("span", { class: "puesto" + (i < 3 ? " oro" : "") }, `#${i + 1}`),
+      el("span", { class: "favs" }, corazon(), num(favs)),
+      ritmoTexto ? el("span", { class: "ritmo" + (caliente ? " caliente" : "") }, ritmoTexto) : null,
+    ),
+    el("div", { class: "cuerpo" },
+      el("div", { class: "sub" }, r.marca || "Sin marca"),
+      el("div", { class: "titulo" }, r.titulo || ""),
+      el("div", { class: "fila" },
+        el("span", { class: "precio" }, euros(r.precio_eur)),
+        r.talla ? el("span", { class: "talla" }, `T. ${r.talla}`) : null,
+      ),
+      el("div", { class: "pie" }, ...pie),
+    ),
+  );
+}
+
+function pintarResumen(lista) {
+  return lista
+    .filter(r => pasaFiltros(`${r.marca} ${r.titulo}`, r.precio_eur, r.talla, r.marca))
+    .map((r, i) => {
+      const nuevo = r.num_apariciones < 2;
+      return tarjetaAnuncio(r, i, r.favoritos,
+        nuevo ? "Nuevo" : `${r.velocidad} favs/h`, !nuevo && r.velocidad >= 2,
+        nuevo ? ["Recién detectado"] : [el("span", { class: "subida" }, `+${r.crecimiento} favs`), ` en ${r.horas} h`]);
+    });
+}
+
+function pintarTop(lista) {
+  return lista
+    .filter(r => pasaFiltros(`${r.marca} ${r.titulo}`, r.precio_eur, r.talla, r.marca))
+    .map((r, i) => tarjetaAnuncio(r, i, r.favoritos_ahora, `+${r.crecimiento}`, r.velocidad >= 2,
+      [el("b", {}, `${r.favoritos_inicio} → ${r.favoritos_ahora}`), ` favs en ${r.horas} h`]));
+}
+
+function rango(t) {
+  const lo = Math.min(t.precio_p25, t.precio_mediana), hi = Math.max(t.precio_p75, t.precio_mediana);
+  const base = lo * 0.85, techo = hi * 1.15, ancho = Math.max(techo - base, 1);
+  const pct = (v) => `${((v - base) / ancho) * 100}%`;
+  return el("div", { class: "rango" },
+    el("div", { class: "barra-precio" },
+      el("div", { class: "tramo", style: `left:${pct(t.precio_p25)};right:calc(100% - ${pct(t.precio_p75)})` }),
+      el("div", { class: "marcador", style: `left:${pct(t.precio_mediana)}`, title: `Precio habitual: ${euros(t.precio_mediana)}` }),
+    ),
+    el("div", { class: "etiquetas" }, el("span", {}, euros(t.precio_p25)), el("span", {}, "rango normal de venta"), el("span", {}, euros(t.precio_p75))),
+  );
+}
+
+function pintarModelos(lista) {
+  const talla = $("f-talla").value;
+  return lista
+    .filter(t => pasaFiltros(`${t.marca} ${t.modelo}`, t.precio_mediana, undefined, t.marca))
+    .filter(t => !talla || t.tallas_top.some(([tt]) => tt === talla))
+    .map((t, i) => botonModelo(t,
+      foto(t.ejemplo_foto_url, t.ejemplo_titulo, el("span", { class: "puesto" + (i < 3 ? " oro" : "") }, `#${i + 1}`)),
+      el("div", { class: "cuerpo" },
+        el("h3", {}, el("small", {}, t.marca), t.modelo),
+        el("div", { class: "fila" },
+          el("span", { class: "precio" }, euros(t.precio_mediana)),
+          el("span", { class: "orden" }, "precio habitual"),
+        ),
+        rango(t),
+        t.competencia_nivel ? el("span", { class: `badge ${t.competencia_nivel}` }, el("i"), COMPETENCIA[t.competencia_nivel]) : null,
+        el("div", { class: "metricas" },
+          el("span", {}, el("b", {}, num(t.num_anuncios)), "anuncios"),
+          el("span", {}, el("b", {}, t.favoritos_media), "favs de media"),
+          el("span", {}, el("b", {}, t.velocidad_media), "favs/h"),
+        ),
+        t.tallas_top.length ? el("div", { class: "tallas" }, ...t.tallas_top.map(([tt, f]) => el("span", {}, `T. ${tt} · ${f}♥`))) : null,
+        el("div", { class: "ver-mas" }, `Ver sus ${t.anuncios ? t.anuncios.length : t.num_anuncios} anuncios →`),
+      ),
+    ));
+}
+
+function botonModelo(t, ...hijos) {
+  const b = el("button", { class: "card modelo", type: "button", "aria-haspopup": "dialog" }, ...hijos);
+  b.addEventListener("click", () => abrirModelo(t));
+  return b;
+}
+
+function haceCuanto(iso) {
+  if (!iso) return "";
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso + "Z")) / 60000));
+  if (min < 60) return `hace ${Math.max(min, 1)} min`;
+  const h = Math.round(min / 60);
+  if (h < 48) return `hace ${h} h`;
+  return `hace ${Math.round(h / 24)} días`;
+}
+
+let modeloAbierto = null;
+let ordenDetalle = "favs";
+const ORDENES = {
+  favs: (a, b) => b.favoritos - a.favoritos || b.velocidad - a.velocidad,
+  ritmo: (a, b) => b.velocidad - a.velocidad || b.favoritos - a.favoritos,
+  barato: (a, b) => a.precio_eur - b.precio_eur,
+  nuevo: (a, b) => (b.visto_por_primera_vez || "").localeCompare(a.visto_por_primera_vez || ""),
+};
+
+function filaAnuncio(a) {
+  const ganados = a.favoritos - (a.favoritos_inicio || 0);
+  const mini = el("div", { class: "mini" }, seguro(a.foto_url) ? el("img", { src: seguro(a.foto_url), alt: "", loading: "lazy", referrerpolicy: "no-referrer" }) : null);
+  return enlace(a.url, "anuncio",
+    mini,
+    el("div", { class: "info" },
+      el("div", { class: "t" }, a.titulo || "Sin título"),
+      el("div", { class: "datos" },
+        el("span", {}, "♥ ", el("b", {}, num(a.favoritos)), " favs"),
+        a.num_apariciones >= 2 && ganados > 0 ? el("span", { class: "subida" }, `+${ganados} en ${a.horas} h`) : null,
+        a.num_apariciones >= 2 ? el("span", {}, el("b", {}, a.velocidad), " favs/h") : el("span", {}, "recién detectado"),
+        a.talla ? el("span", {}, "Talla ", el("b", {}, a.talla)) : null,
+        el("span", {}, `Visto por 1ª vez ${haceCuanto(a.visto_por_primera_vez)}`),
+      ),
+    ),
+    el("div", { class: "der" },
+      el("span", { class: "p" }, euros(a.precio_eur)),
+      el("span", { class: "estado-anuncio" + (a.activo ? "" : " fuera"),
+        title: a.activo ? "Aparece en el último escaneo" : "No ha salido en el último escaneo: puede estar vendido, reservado o simplemente más abajo en Vinted" },
+        a.activo ? "Activo" : "No visto ahora"),
+      el("span", { class: "ir" }, "Ver en Vinted ↗"),
+    ),
+  );
+}
+
+function pintarDetalle() {
+  const t = modeloAbierto;
+  if (!t) return;
+  const lista = [...(t.anuncios || [])].sort(ORDENES[ordenDetalle]);
+  $("det-lista").replaceChildren(...lista.map(filaAnuncio));
+  document.querySelectorAll(".det-orden button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.orden === ordenDetalle)));
+}
+
+function abrirModelo(t) {
+  modeloAbierto = t;
+  ordenDetalle = "favs";
+  $("det-titulo").replaceChildren(el("small", {}, t.marca), t.modelo);
+  const activos = (t.anuncios || []).filter(a => a.activo).length;
+  $("det-resumen").replaceChildren(
+    el("span", { class: "pill" }, "Precio habitual ", el("b", {}, euros(t.precio_mediana))),
+    el("span", { class: "pill" }, `Normal ${euros(t.precio_p25)} – ${euros(t.precio_p75)}`),
+    el("span", { class: "pill" }, el("b", {}, num(activos)), ` activos de ${num((t.anuncios || []).length)}`),
+    t.competencia_nivel ? el("span", { class: `badge ${t.competencia_nivel}` }, el("i"), COMPETENCIA[t.competencia_nivel]) : null,
+  );
+  pintarDetalle();
+  $("det-lista").scrollTop = 0;
+  $("detalle").showModal();
+}
+
+function pintarMarcas() {
+  const caja = $("marcas");
+  if (vista !== "resumen" || !datos.marcas.length) { caja.replaceChildren(); return; }
+  caja.replaceChildren(...datos.marcas.slice(0, 12).map(m => {
+    const b = el("button", { class: "marca-chip" + (m.marca === marcaActiva ? " activa" : ""), type: "button" },
+      el("span", { class: "ini" }, (m.marca || "?").trim().charAt(0).toUpperCase()),
+      m.marca, el("small", {}, `${m.favoritos_media}♥`));
+    b.addEventListener("click", () => { marcaActiva = marcaActiva === m.marca ? "" : m.marca; pintar(); });
+    return b;
+  }));
+}
+
+function pintar() {
+  if (!datos) return;
+  $("titulo-vista").textContent = VISTAS[vista].titulo;
+  $("intro").textContent = VISTAS[vista].intro;
+  const lista = $("lista");
+  lista.className = vista === "modelos" ? "grid modelos" : "grid";
+  pintarMarcas();
+  const nodos = vista === "resumen" ? pintarResumen(datos.resumen)
+    : vista === "top" ? pintarTop(datos.top) : pintarModelos(datos.modelos);
+  $("contador").textContent = nodos.length ? `${nodos.length} resultados` : "";
+  const hayFiltros = $("f-texto").value || $("f-min").value || $("f-max").value || $("f-talla").value || marcaActiva;
+  lista.replaceChildren(...(nodos.length ? nodos : [el("div", { class: "vacio" },
+    el("div", { class: "icono" }, hayFiltros ? "🔍" : "⏳"),
+    el("b", {}, hayFiltros ? "Nada con estos filtros" : "Todavía recogiendo datos"),
+    hayFiltros ? "Prueba a quitar algún filtro." : "Esta sección necesita varios escaneos seguidos. Vuelve en unas horas.")]));
+}
+
+function esqueletos() {
+  $("lista").replaceChildren(...Array.from({ length: 8 }, () => el("div", { class: "card esqueleto" },
+    el("div", { class: "foto" }),
+    el("div", { class: "cuerpo" }, el("div", { class: "linea", style: "width:40%" }), el("div", { class: "linea", style: "width:90%" }), el("div", { class: "linea", style: "width:55%;height:18px" })))));
+}
+
+function rellenarTallas() {
+  const tallas = new Set();
+  for (const r of [...datos.resumen, ...datos.top]) if (/^\d+(\.\d+)?$/.test(r.talla || "")) tallas.add(r.talla);
+  const sel = $("f-talla");
+  [...tallas].sort((a, b) => parseFloat(a) - parseFloat(b)).forEach(t => sel.append(el("option", { value: t }, `Talla ${t}`)));
+}
+
+async function cargar() {
+  esqueletos();
+  try {
+    const resp = await fetch("/api/webhook");
+    if (!resp.ok) throw new Error(resp.status);
+    datos = await resp.json();
+    const f = datos.actualizado ? new Date(datos.actualizado + "Z") : null;
+    if (f) {
+      const min = Math.round((Date.now() - f) / 60000);
+      const hace = min < 60 ? `hace ${Math.max(min, 1)} min` : f.toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      $("estado").textContent = `Actualizado ${hace}`;
+      $("vivo").classList.toggle("viejo", min > 60);
+    } else {
+      $("estado").textContent = "Sin escaneos todavía";
+    }
+    $("s-activos").textContent = num(datos.num_activos ?? datos.resumen.length);
+    $("s-modelos").textContent = num(datos.modelos.length);
+    $("s-escaneos").textContent = num(datos.num_escaneos);
+    $("n-resumen").textContent = (datos.num_activos ?? datos.resumen.length) || "";
+    $("n-top").textContent = datos.top.length || "";
+    $("n-modelos").textContent = datos.modelos.length || "";
+    moverIndicador(false);
+    $("pmin").textContent = datos.precio_minimo;
+    rellenarTallas();
+    pintar();
+  } catch (e) {
+    $("estado").textContent = "No se pudieron cargar los datos";
+    $("lista").replaceChildren(el("div", { class: "vacio" }, el("div", { class: "icono" }, "⚠️"), el("b", {}, "No se pudieron cargar los datos"), "Recarga la página en un momento."));
+  }
+}
+
+const ORDEN_VISTAS = ["resumen", "top", "modelos"];
+const indicador = el("span", { class: "indicador", "aria-hidden": "true" });
+document.querySelector(".tabs").prepend(indicador);
+
+function moverIndicador(animar = true) {
+  const b = document.querySelector('.tabs button[aria-selected="true"]');
+  if (!b) return;
+  if (!animar) indicador.style.transition = "none";
+  indicador.style.width = `${b.offsetWidth}px`;
+  indicador.style.transform = `translateX(${b.offsetLeft}px)`;
+  if (animar) {
+    indicador.classList.remove("estira"); void indicador.offsetWidth; indicador.classList.add("estira");
+  } else {
+    void indicador.offsetWidth; indicador.style.transition = "";
+  }
+}
+
+function cambiarVista(nueva) {
+  if (nueva === vista || !VISTAS[nueva]) return;
+  const dir = ORDEN_VISTAS.indexOf(nueva) > ORDEN_VISTAS.indexOf(vista) ? "der" : "izq";
+  vista = nueva;
+  marcaActiva = "";
+  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x.dataset.vista === nueva)));
+  moverIndicador();
+  const cont = $("contenido");
+  cont.classList.remove("entra-der", "entra-izq"); void cont.offsetWidth; cont.classList.add(`entra-${dir}`);
+  pintar();
+  const tope = document.querySelector(".hero").offsetHeight;
+  if (window.scrollY > tope) window.scrollTo({ top: tope, behavior: "smooth" });
+}
+
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => cambiarVista(b.dataset.vista)));
+window.addEventListener("resize", () => moverIndicador(false));
+moverIndicador(false);
+if (document.fonts) document.fonts.ready.then(() => moverIndicador(false));
+
+// Deslizar con el dedo sobre la lista para cambiar de pestaña.
+let toque = null;
+$("contenido").addEventListener("touchstart", (e) => {
+  if (e.touches.length !== 1 || e.target.closest(".marcas")) { toque = null; return; }
+  toque = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+$("contenido").addEventListener("touchend", (e) => {
+  if (!toque || $("detalle").open) return;
+  const dx = e.changedTouches[0].clientX - toque.x, dy = e.changedTouches[0].clientY - toque.y;
+  toque = null;
+  if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+  const i = ORDEN_VISTAS.indexOf(vista) + (dx < 0 ? 1 : -1);
+  if (i >= 0 && i < ORDEN_VISTAS.length) cambiarVista(ORDEN_VISTAS[i]);
+}, { passive: true });
+["f-texto", "f-min", "f-max", "f-talla"].forEach(id => $(id).addEventListener("input", pintar));
+$("det-cerrar").addEventListener("click", () => $("detalle").close());
+$("detalle").addEventListener("click", (e) => { if (e.target === $("detalle")) $("detalle").close(); });
+document.querySelectorAll(".det-orden button").forEach(b => b.addEventListener("click", () => { ordenDetalle = b.dataset.orden; pintarDetalle(); }));
+cargar();
+</script>
+</body>
+</html>
