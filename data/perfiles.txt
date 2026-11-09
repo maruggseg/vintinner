@@ -1,0 +1,4 @@
+# Perfiles de Vinted a seguir: uno por línea (el enlace al perfil o su número).
+# Se añaden/quitan solos desde la web (apartado "Perfiles") o con /seguir y
+# /dejar en Telegram. Ejemplo:
+# https://www.vinted.es/member/12345678-nombre
