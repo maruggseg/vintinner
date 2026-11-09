@@ -33,6 +33,29 @@ jobs:
       # quedaba colgada varios minutos descargando/instalando una build
       # de Python, probablemente por los recursos limitados de la
       # máquina (512 MB RAM, shared-cpu-1x).
+      # Los datos (historial.csv, perfiles) viven en la rama "datos", no en
+      # main: Vercel cuenta como despliegue cada commit a main (aunque lo
+      # cancele) y el plan gratis permite 100 al día; con un commit cada
+      # 10 min se agotaba el cupo y los cambios de la web no se publicaban.
+      # Vercel tiene desactivada la rama "datos" (vercel.json).
+      - name: Traer datos (rama datos)
+        run: |
+          D="$RUNNER_TEMP/datos"
+          rm -rf "$D"; git worktree prune
+          if git fetch --depth=1 origin datos; then
+            git worktree add --detach "$D" FETCH_HEAD
+          else
+            # Primera vez: crear la rama con los datos que había en main.
+            git worktree add --detach "$D" HEAD
+            (
+              cd "$D"
+              git checkout -q --orphan datos-nueva
+              git rm -rq --cached .
+              find . -mindepth 1 -maxdepth 1 ! -name .git ! -name data -exec rm -rf {} +
+            )
+          fi
+          cp -f "$D"/data/* data/ 2>/dev/null || true
+
       - name: Instalar dependencias
         run: python3 -m pip install --user -r requirements.txt
 
@@ -47,15 +70,20 @@ jobs:
         continue-on-error: true
         run: python3 seguir_perfiles.py
 
-      - name: Guardar cambios (historial y offset)
+      - name: Guardar datos (rama datos)
         run: |
+          D="$RUNNER_TEMP/datos"
+          mkdir -p "$D/data"
+          cp -f data/historial.csv "$D/data/"
+          cp -f data/perfiles.json "$D/data/" 2>/dev/null || true
+          cd "$D"
           git config user.name "vinted-bot"
           git config user.email "vinted-bot@users.noreply.github.com"
-          git add data/historial.csv
-          git add data/perfiles.json 2>/dev/null || true
-          git commit -m "Actualizar datos" || echo "Sin cambios que guardar"
+          git add data
+          git commit -q -m "Actualizar datos" || echo "Sin cambios que guardar"
           for intento in 1 2 3 4 5; do
-            git pull --rebase --depth=1 origin main && git push && break
+            git push origin HEAD:datos && break
             echo "Push falló (intento $intento), reintentando..."
+            git pull --rebase --depth=1 origin datos || true
             sleep $((intento * 3))
           done

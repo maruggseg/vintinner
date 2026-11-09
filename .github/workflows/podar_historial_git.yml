@@ -1,6 +1,6 @@
 name: Podar historial de git
 
-# El bot hace commit a main cada ~10 min (solo para guardar
+# El bot hace commit a la rama "datos" cada ~10 min (solo para guardar
 # data/historial.csv). Aunque vercel.json evita que eso dispare
 # despliegues, el historial de git en sí sigue creciendo sin límite —
 # cada commit guarda casi una copia completa del CSV. Si se deja crecer
@@ -32,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: datos   # los datos del bot viven en esta rama (ver vinted.yml)
           fetch-depth: 1
 
       - name: Podar historial (commit único)
@@ -42,6 +43,4 @@ jobs:
           git checkout --orphan squash_tmp
           git add -A
           git commit -m "Podar historial de git (automático)"
-          git branch -D main
-          git branch -m main
-          git push -f origin main
+          git push -f origin HEAD:datos

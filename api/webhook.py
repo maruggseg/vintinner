@@ -43,8 +43,11 @@ ARCHIVO_HISTORIAL = os.path.join(os.path.dirname(__file__), "..", "data", "histo
 # vivo de GitHub en cada petición (con "?_=timestamp" para saltarnos
 # cualquier caché), y solo caemos al archivo local empaquetado si GitHub no
 # responde.
-URL_HISTORIAL_GITHUB = "https://raw.githubusercontent.com/maruggseg/vintinner/main/data/historial.csv"
-URL_PERFILES_GITHUB = "https://raw.githubusercontent.com/maruggseg/vintinner/main/data/perfiles.json"
+# Los datos viven en la rama "datos" (ver .github/workflows/vinted.yml);
+# si aún no existe, se leen los que quedaron en main.
+RAMA_DATOS = "datos"
+URL_HISTORIAL_GITHUB = "https://raw.githubusercontent.com/maruggseg/vintinner/{rama}/data/historial.csv"
+URL_PERFILES_GITHUB = "https://raw.githubusercontent.com/maruggseg/vintinner/{rama}/data/perfiles.json"
 REPO_GITHUB = "maruggseg/vintinner"
 RUTA_LISTA_PERFILES = "data/perfiles.txt"
 # Tope de perfiles seguidos en total: cada uno son varias peticiones a Vinted
@@ -90,16 +93,18 @@ def enviar_foto(foto_url, caption, chat_id):
 
 def cargar_historial():
     texto = None
-    try:
-        resp = requests.get(
-            URL_HISTORIAL_GITHUB,
-            params={"_": int(datetime.now().timestamp())},
-            timeout=10,
-        )
-        if resp.status_code == 200:
-            texto = resp.text
-    except requests.RequestException:
-        pass
+    for rama in (RAMA_DATOS, "main"):
+        try:
+            resp = requests.get(
+                URL_HISTORIAL_GITHUB.format(rama=rama),
+                params={"_": int(datetime.now().timestamp())},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                texto = resp.text
+                break
+        except requests.RequestException:
+            pass
 
     if texto is None:
         if not os.path.exists(ARCHIVO_HISTORIAL):
@@ -568,12 +573,13 @@ def comando_modelos(chat_id, dias=EDAD_MAXIMA_DIAS, min_anuncios=3):
 # ---------------- Perfiles seguidos ----------------
 
 def cargar_perfiles():
-    try:
-        resp = requests.get(URL_PERFILES_GITHUB, params={"_": int(datetime.now().timestamp())}, timeout=10)
-        if resp.status_code == 200:
-            return resp.json()
-    except (requests.RequestException, ValueError):
-        pass
+    for rama in (RAMA_DATOS, "main"):
+        try:
+            resp = requests.get(URL_PERFILES_GITHUB.format(rama=rama), params={"_": int(datetime.now().timestamp())}, timeout=10)
+            if resp.status_code == 200:
+                return resp.json()
+        except (requests.RequestException, ValueError):
+            pass
     return {"perfiles": {}, "articulos": {}}
 
 
@@ -668,7 +674,7 @@ def cambiar_lista_perfiles(accion, texto):
     url = f"https://api.github.com/repos/{REPO_GITHUB}/contents/{RUTA_LISTA_PERFILES}"
     cabeceras = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
     for _ in range(3):  # por si el escaneo hace push justo a la vez
-        resp = requests.get(url, headers=cabeceras, params={"ref": "main"}, timeout=10)
+        resp = requests.get(url, headers=cabeceras, params={"ref": RAMA_DATOS}, timeout=10)
         if resp.status_code == 200:
             info = resp.json()
             sha = info["sha"]
@@ -696,7 +702,7 @@ def cambiar_lista_perfiles(accion, texto):
         cuerpo = {
             "message": f"Perfiles: {accion} {id_perfil}",
             "content": base64.b64encode(("\n".join(lineas) + "\n").encode("utf-8")).decode("ascii"),
-            "branch": "main",
+            "branch": RAMA_DATOS,
         }
         if sha:
             cuerpo["sha"] = sha
