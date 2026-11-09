@@ -302,6 +302,8 @@
   .tira { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .tira div { aspect-ratio: 4 / 5; border-radius: 10px; overflow: hidden; background: var(--bg-2); }
   .tira img { width: 100%; height: 100%; object-fit: cover; display: block; color: transparent; }
+  .selector-perfiles { grid-column: 1 / -1; }
+  .card.perfil.pendiente { opacity: .7; cursor: default; }
   .card.alta { padding: 16px; display: grid; gap: 10px; align-content: start; }
   .alta b { font-size: 15px; }
   .alta p { margin: 0; font-size: 13px; color: var(--muted); }
@@ -704,54 +706,107 @@ function avatar(p) {
   return el("div", { class: "avatar" }, s ? el("img", { src: s, alt: "", loading: "lazy", referrerpolicy: "no-referrer" }) : (p.nombre || "?").charAt(0).toUpperCase());
 }
 
+// "Mis perfiles": los que ha añadido esta persona, guardados en su móvil.
+// El escaneo sigue la lista común; aquí solo decidimos qué ve cada uno.
+const CLAVE_MIS = "vintinner-mis-perfiles";
+function misPerfiles() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_MIS)) || []; } catch (e) { return []; }
+}
+function guardarMis(ids) {
+  try { localStorage.setItem(CLAVE_MIS, JSON.stringify([...new Set(ids)])); } catch (e) {}
+}
+const esMio = (id) => misPerfiles().includes(String(id));
+function idDePerfil(texto) {
+  texto = (texto || "").trim();
+  if (/^\d+$/.test(texto)) return texto;
+  const m = texto.match(/\/member\/(?:general\/)?(\d+)/);
+  return m ? m[1] : null;
+}
+let filtroPerfiles = null; // "mios" | "todos"; null = decidir según haya o no
+
 function leerClave() {
+  if (!datos.pide_clave) return "";
   let c = null;
   try { c = localStorage.getItem("vintinner-clave"); } catch (e) {}
   if (!c) {
-    c = prompt("Contraseña para cambiar los perfiles:");
+    c = prompt("Contraseña para añadir perfiles:");
     if (!c) return null;
     try { localStorage.setItem("vintinner-clave", c); } catch (e) {}
   }
   return c;
 }
 
-async function cambiarPerfil(accion, perfil, aviso, boton) {
+async function seguirPerfil(texto, aviso, boton) {
+  const id = idDePerfil(texto);
+  if (!id) {
+    aviso.className = "aviso mal";
+    aviso.textContent = "Eso no parece un perfil de Vinted. Tiene que ser como …/member/12345678-nombre.";
+    return false;
+  }
   const clave = leerClave();
-  if (!clave) return;
+  if (clave === null) return false;
   boton.disabled = true;
   aviso.className = "aviso"; aviso.textContent = "Guardando…";
+  let ok = false;
   try {
-    const resp = await fetch("/api/webhook", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion, perfil, clave }) });
+    const resp = await fetch("/api/webhook", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion: "seguir", perfil: texto, clave }) });
     const r = await resp.json();
     if (resp.status === 403) { try { localStorage.removeItem("vintinner-clave"); } catch (e) {} }
+    ok = r.ok;
     aviso.className = "aviso " + (r.ok ? "bien" : "mal");
-    aviso.textContent = r.mensaje;
+    aviso.textContent = r.ok && !(datos.perfiles || []).some(p => p.id === id)
+      ? "Añadido. Sus zapatillas saldrán en unos 10 minutos, en el siguiente escaneo." : r.mensaje;
   } catch (e) {
     aviso.className = "aviso mal"; aviso.textContent = "No se pudo conectar. Prueba otra vez.";
   }
   boton.disabled = false;
+  if (ok) {
+    guardarMis([...misPerfiles(), id]);
+    filtroPerfiles = "mios";
+    setTimeout(pintar, 1600);
+  }
+  return ok;
 }
 
 function tarjetaAlta() {
   if (!datos.edicion_perfiles) {
     return el("div", { class: "card alta" },
       el("b", {}, "Seguir un perfil"),
-      el("p", {}, "Para poder añadir perfiles desde aquí falta configurar GITHUB_TOKEN y CLAVE_WEB en Vercel (Settings → Environment Variables) y volver a desplegar."));
+      el("p", {}, "Para poder añadir perfiles desde aquí falta configurar GITHUB_TOKEN en Vercel (Settings → Environment Variables) y volver a desplegar."));
   }
-  const input = el("input", { type: "url", placeholder: "https://www.vinted.es/member/…", "aria-label": "Enlace del perfil", required: "" });
+  const input = el("input", { type: "text", inputmode: "url", placeholder: "https://www.vinted.es/member/…", "aria-label": "Enlace del perfil", required: "" });
   const boton = el("button", { class: "boton", type: "submit" }, "Seguir");
   const aviso = el("div", { class: "aviso" });
   const form = el("form", {}, input, boton);
-  form.addEventListener("submit", (e) => { e.preventDefault(); cambiarPerfil("seguir", input.value, aviso, boton).then(() => { if (aviso.classList.contains("bien")) input.value = ""; }); });
+  form.addEventListener("submit", async (e) => { e.preventDefault(); if (await seguirPerfil(input.value, aviso, boton)) input.value = ""; });
   return el("div", { class: "card alta" },
     el("b", {}, "Seguir un perfil"),
-    el("p", {}, "Pega el enlace del perfil de Vinted (en la app: perfil → compartir → copiar enlace)."),
+    el("p", {}, "Pega el enlace del perfil de Vinted (en la app: perfil → compartir → copiar enlace). Se guarda en tus perfiles, en este móvil."),
     form, aviso);
+}
+
+function tarjetaPendiente(id) {
+  return el("div", { class: "card perfil pendiente" },
+    el("div", { class: "cab" }, el("div", { class: "avatar" }, "…"),
+      el("div", { style: "min-width:0" }, el("h3", {}, `Perfil ${id}`), el("small", {}, "Se cargará en el siguiente escaneo (cada 10 min)"))));
+}
+
+function selectorPerfiles(numMios, numTodos) {
+  const caja = el("div", { class: "det-orden selector-perfiles", role: "group", "aria-label": "Qué perfiles ver" });
+  for (const [clave, texto] of [["mios", `Mis perfiles · ${numMios}`], ["todos", `Todos · ${numTodos}`]]) {
+    const b = el("button", { type: "button", "aria-pressed": String(filtroPerfiles === clave) }, texto);
+    b.addEventListener("click", () => { filtroPerfiles = clave; pintar(); });
+    caja.append(b);
+  }
+  return caja;
 }
 
 function pintarPerfiles(lista) {
   const q = $("f-texto").value.trim().toLowerCase();
-  const nodos = lista
+  const mios = misPerfiles();
+  if (!filtroPerfiles) filtroPerfiles = mios.length ? "mios" : "todos";
+  const visibles = filtroPerfiles === "mios" ? lista.filter(p => mios.includes(p.id)) : lista;
+  const nodos = visibles
     .filter(p => !q || (p.nombre || "").toLowerCase().includes(q))
     .map(p => {
       const b = el("button", { class: "card perfil", type: "button", "aria-haspopup": "dialog" },
@@ -770,7 +825,8 @@ function pintarPerfiles(lista) {
       b.addEventListener("click", () => abrirPerfil(p));
       return b;
     });
-  return [tarjetaAlta(), ...nodos];
+  const pendientes = filtroPerfiles === "mios" ? mios.filter(id => !lista.some(p => p.id === id)).map(tarjetaPendiente) : [];
+  return [selectorPerfiles(mios.length, lista.length), tarjetaAlta(), ...pendientes, ...nodos];
 }
 
 function filaArticulo(a) {
@@ -811,11 +867,15 @@ function abrirPerfil(p) {
   $("det-titulo").replaceChildren(el("small", {}, "Perfil"), p.nombre || `Perfil ${p.id}`);
   $("det-titulo").classList.add("sin-mayus");
   const extras = [];
-  if (datos.edicion_perfiles) {
-    const aviso = el("span", { class: "aviso" });
-    const boton = el("button", { class: "boton sec", type: "button" }, "Dejar de seguir");
-    boton.addEventListener("click", () => { if (confirm(`¿Dejar de seguir a ${p.nombre}?`)) cambiarPerfil("dejar", p.id, aviso, boton); });
-    extras.push(boton, aviso);
+  {
+    const boton = el("button", { class: "boton sec", type: "button" });
+    const rotular = () => { boton.textContent = esMio(p.id) ? "Quitar de mis perfiles" : "Añadir a mis perfiles"; };
+    rotular();
+    boton.addEventListener("click", () => {
+      guardarMis(esMio(p.id) ? misPerfiles().filter(id => id !== p.id) : [...misPerfiles(), p.id]);
+      rotular(); pintar();
+    });
+    extras.push(boton);
   }
   $("det-resumen").replaceChildren(
     el("span", { class: "pill" }, el("b", {}, num(p.num_activos)), " a la venta"),
@@ -931,10 +991,11 @@ function pintar() {
   const nodos = vista === "resumen" ? pintarResumen(datos.resumen)
     : vista === "top" ? pintarTop(datos.top)
     : vista === "perfiles" ? pintarPerfiles(datos.perfiles || []) : pintarModelos(datos.modelos);
-  const numPerfiles = (datos.perfiles || []).length;
-  $("contador").textContent = vista === "perfiles" ? (numPerfiles ? `${numPerfiles} perfiles` : "") : nodos.length ? `${nodos.length} resultados` : "";
-  if (vista === "perfiles" && !numPerfiles) {
-    nodos.push(el("div", { class: "vacio" }, el("div", { class: "icono" }, "👀"), el("b", {}, "Aún no sigues ningún perfil"),
+  $("contador").textContent = vista === "perfiles" ? "" : nodos.length ? `${nodos.length} resultados` : "";
+  if (vista === "perfiles" && nodos.length <= 2) {
+    const mios = filtroPerfiles === "mios";
+    nodos.push(el("div", { class: "vacio" }, el("div", { class: "icono" }, "👀"),
+      el("b", {}, mios ? "Aún no tienes perfiles" : "Nadie sigue ningún perfil todavía"),
       datos.edicion_perfiles ? "Pega arriba el enlace de un perfil de Vinted." : "En cuanto esté configurado, podrás añadirlos desde aquí."));
   }
   const hayFiltros = $("f-texto").value || $("f-min").value || $("f-max").value || $("f-talla").value || marcaActiva;

@@ -10,7 +10,8 @@ Variable de entorno necesaria en Vercel: TELEGRAM_TOKEN
 
 Opcionales, para añadir/quitar perfiles a seguir (web y /seguir, /dejar):
   GITHUB_TOKEN  token con permiso de escritura en "Contents" solo de este repo
-  CLAVE_WEB     contraseña que pide la web para añadir/quitar perfiles
+  CLAVE_WEB     (opcional) contraseña para añadir perfiles desde la web; si no
+                se pone, cualquiera puede añadir (hasta MAX_PERFILES)
   CHATS_PERMITIDOS  IDs de chat de Telegram (separados por comas) que pueden
                     usar /seguir y /dejar; si no se pone, cualquiera puede.
 """
@@ -46,6 +47,9 @@ URL_HISTORIAL_GITHUB = "https://raw.githubusercontent.com/maruggseg/vintinner/ma
 URL_PERFILES_GITHUB = "https://raw.githubusercontent.com/maruggseg/vintinner/main/data/perfiles.json"
 REPO_GITHUB = "maruggseg/vintinner"
 RUTA_LISTA_PERFILES = "data/perfiles.txt"
+# Tope de perfiles seguidos en total: cada uno son varias peticiones a Vinted
+# en cada escaneo, y la web deja añadir a cualquiera.
+MAX_PERFILES = 50
 PRECIO_MINIMO = 70
 EDAD_MAXIMA_DIAS = 7  # ignoramos anuncios que llevamos rastreando más tiempo que esto: ya no son "nuevos"
 
@@ -678,7 +682,9 @@ def cambiar_lista_perfiles(accion, texto):
         ya_esta = any(_id_de_perfil(l.split("#", 1)[0]) == id_perfil for l in lineas)
         if accion == "seguir":
             if ya_esta:
-                return True, "Ese perfil ya lo estabas siguiendo."
+                return True, "Perfil añadido."
+            if sum(1 for l in lineas if _id_de_perfil(l.split("#", 1)[0])) >= MAX_PERFILES:
+                return False, f"Ya se siguen {MAX_PERFILES} perfiles, que es el máximo. Hay que quitar alguno antes."
             lineas.append(texto.strip() if "/member/" in texto else id_perfil)
             mensaje = "Perfil añadido. Saldrá en unos 10 minutos, en el siguiente escaneo."
         else:
@@ -735,7 +741,8 @@ def datos_web():
         "top": calcular_top(filas, tasas)[:120],
         "modelos": calcular_modelos(filas, tasas)[:40],
         "perfiles": calcular_perfiles(cargar_perfiles(), tasas),
-        "edicion_perfiles": bool(os.environ.get("GITHUB_TOKEN") and os.environ.get("CLAVE_WEB")),
+        "edicion_perfiles": bool(os.environ.get("GITHUB_TOKEN")),
+        "pide_clave": bool(os.environ.get("CLAVE_WEB")),
     }
 
 
@@ -760,13 +767,17 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(cuerpo)
 
     def _peticion_web(self, peticion):
-        """La web pide añadir/quitar un perfil (protegido con CLAVE_WEB)."""
+        """
+        La web pide añadir un perfil. Solo "seguir": quitar de "mis perfiles"
+        se hace en el propio móvil, y quitarlo de la lista común (para todos)
+        solo con /dejar en Telegram, así nadie borra los perfiles de otro.
+        """
         clave = os.environ.get("CLAVE_WEB", "")
-        if not clave or not hmac.compare_digest(str(peticion.get("clave", "")), clave):
+        if clave and not hmac.compare_digest(str(peticion.get("clave", "")), clave):
             self._responder_json(403, {"ok": False, "mensaje": "Contraseña incorrecta."})
             return
         accion = peticion.get("accion")
-        if accion not in ("seguir", "dejar"):
+        if accion != "seguir":
             self._responder_json(400, {"ok": False, "mensaje": "Acción no válida."})
             return
         ok, mensaje = cambiar_lista_perfiles(accion, str(peticion.get("perfil", "")))
