@@ -77,9 +77,12 @@ jobs:
           cp -f data/historial.csv "$D/data/"
           cp -f data/perfiles.json "$D/data/" 2>/dev/null || true
           cd "$D"
+          # Vercel lee la configuración de la rama que despliega: sin esto
+          # intentaba desplegar "datos" (que no tiene la web) y fallaba.
+          printf '%s\n' '{' '  "git": { "deploymentEnabled": false },' '  "ignoreCommand": "exit 0"' '}' > vercel.json
           git config user.name "vinted-bot"
           git config user.email "vinted-bot@users.noreply.github.com"
-          git add data
+          git add data vercel.json
           git commit -q -m "Actualizar datos" || echo "Sin cambios que guardar"
           for intento in 1 2 3 4 5; do
             git push origin HEAD:datos && break
