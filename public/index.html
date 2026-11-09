@@ -554,7 +554,7 @@ const VISTAS = {
   resumen: { titulo: "Lo que se mueve ahora", intro: "Anuncios activos ordenados por lo rápido que están ganando favoritos en este momento." },
   top: { titulo: "Más subida de favoritos", intro: "Los anuncios que más favoritos han ganado en los últimos días." },
   modelos: { titulo: "Modelos ganadores", intro: "Marca + modelo que se repite con interés entre varios vendedores: a cuánto venderlo, cuánta competencia hay y qué tallas piden." },
-  perfiles: { titulo: "Perfiles que sigues", intro: "Cada zapatilla que suben se guarda sola: favoritos, visitas, cuándo la subieron y si se vende. Las ofertas y los mensajes solo los ve el dueño de la cuenta, así que no salen aquí." },
+  perfiles: { titulo: "Perfiles que sigues", intro: "Cada zapatilla que suben se guarda sola: favoritos, cuándo la subieron y si se vende. Las ofertas y los mensajes solo los ve el dueño de la cuenta, así que no salen aquí." },
 };
 const ESTADOS = {
   activo: ["Activo", ""],
@@ -839,7 +839,7 @@ function filaArticulo(a) {
       el("div", { class: "datos" },
         el("span", {}, "♥ ", el("b", {}, num(a.favoritos)), " favs"),
         a.favs_24h > 0 ? el("span", { class: "subida" }, `+${a.favs_24h} en 24 h`) : null,
-        a.vistas != null ? el("span", {}, el("b", {}, num(a.vistas)), " visitas") : null,
+        a.vistas ? el("span", {}, el("b", {}, num(a.vistas)), " visitas") : null,
         a.talla ? el("span", {}, "Talla ", el("b", {}, a.talla)) : null,
         a.horas_subido != null ? el("span", {}, `Subido ${horasTexto(a.horas_subido)}`) : null,
         a.horas_vendido != null && clase !== "" ? el("span", {}, `${estado} ${horasTexto(a.horas_vendido)}`) : null,
