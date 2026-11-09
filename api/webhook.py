@@ -759,8 +759,9 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         # Los datos cambian cada ~10 min: la CDN de Vercel puede servir
-        # la misma respuesta 5 min sin volver a calcular.
-        self.send_header("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600")
+        # la misma respuesta 1 min sin volver a calcular (más tiempo hacía
+        # que un perfil recién escaneado tardase demasiado en aparecer).
+        self.send_header("Cache-Control", "public, s-maxage=60, stale-while-revalidate=60")
         self.end_headers()
         self.wfile.write(cuerpo)
 
