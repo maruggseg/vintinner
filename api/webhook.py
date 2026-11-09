@@ -53,6 +53,8 @@ RUTA_LISTA_PERFILES = "data/perfiles.txt"
 # Tope de perfiles seguidos en total: cada uno son varias peticiones a Vinted
 # en cada escaneo, y la web deja añadir a cualquiera.
 MAX_PERFILES = 50
+# En los perfiles seguidos solo se muestran artículos desde este precio (€).
+PRECIO_MINIMO_PERFILES = 40
 PRECIO_MINIMO = 70
 EDAD_MAXIMA_DIAS = 7  # ignoramos anuncios que llevamos rastreando más tiempo que esto: ya no son "nuevos"
 
@@ -606,6 +608,8 @@ def calcular_perfiles(datos, tasas):
             precio_eur = _precio_en_eur(a.get("precio"), a.get("moneda") or "EUR", tasas)
         except (TypeError, ValueError):
             precio_eur = None
+        if not precio_eur or precio_eur < PRECIO_MINIMO_PERFILES:
+            continue
         por_perfil[a.get("perfil_id")].append({
             "id": id_art,
             "titulo": a.get("titulo"),
